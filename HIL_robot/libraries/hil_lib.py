@@ -136,9 +136,11 @@ class HILLibrary:
                  "Get-PnpDevice -PresentOnly | ForEach-Object { $_.FriendlyName + ' ' + $_.InstanceId }"],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
             )
 
-            out = result.stdout.lower()
+            out = (result.stdout or "").lower()
 
             if "pid_df11" in out or "stm32 bootloader" in out:
                 logger.info("STM32 DFU device detected")
@@ -166,7 +168,10 @@ class HILLibrary:
 
         logger.info("Flashing firmware...")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # STM32_Programmer_CLI prints progress-bar bytes that are not valid UTF-8;
+        # decode leniently or the reader thread dies and stdout becomes None.
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                encoding="utf-8", errors="replace")
 
         logger.info(result.stdout)
 
