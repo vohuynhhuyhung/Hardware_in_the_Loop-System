@@ -31,7 +31,7 @@ jobs:
         env:
           ONLY: ${{ github.event.inputs.only }}
           REF: ${{ github.event.inputs.ref }}
-        shell: pwsh
+        shell: powershell
         run: |
           $a = @()
           if ($env:ONLY) { $a += @("--only", $env:ONLY) }
