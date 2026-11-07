@@ -129,15 +129,18 @@ class HILLibrary:
 
         while time.time() - start < timeout:
 
+            # wmic was removed in recent Windows 11; query PnP via PowerShell instead.
+            # STM32 ROM bootloader (DFU) enumerates as VID_0483 & PID_DF11.
             result = subprocess.run(
-                ["wmic", "path", "Win32_PnPEntity", "get", "Name"],
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 "Get-PnpDevice -PresentOnly | ForEach-Object { $_.FriendlyName + ' ' + $_.InstanceId }"],
                 capture_output=True,
                 text=True,
             )
 
             out = result.stdout.lower()
 
-            if "bootloader" in out or "stm32" in out:
+            if "pid_df11" in out or "stm32 bootloader" in out:
                 logger.info("STM32 DFU device detected")
                 return
 
@@ -151,7 +154,7 @@ class HILLibrary:
     
     def _flash_via_stm32_cli(self, fw_path):
 
-        cli_path = r"C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
+        cli_path = r"D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
 
         cmd = [
             cli_path,

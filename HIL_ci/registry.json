@@ -1,3 +1,3 @@
 {
-  "repos": []
+  "repos": [ { "name": "dut", "repo": "https://github.com/vohuynhhuyhung/STM32F4_DUT_Repo_Test.git", "branches": ["main"] } ]
 }
