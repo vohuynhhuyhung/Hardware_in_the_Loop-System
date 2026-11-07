@@ -2,7 +2,7 @@
 # Platform-owned stage: bench smoke check, then flash. Not editable by users.
 Resource    ${HIL_ROOT}/HIL_robot/resources/HIL_keywords.robot
 
-Suite Setup         Connect To HIL
+Suite Setup         Run Keywords    Connect To HIL    AND    HIL Set DUT BOOT0    0
 Suite Teardown      Disconnect from HIL
 
 *** Variables ***
@@ -14,6 +14,7 @@ HIL Is Alive
 
 HIL Can Switch DUT Power
     HIL Power DUT On
+    Sleep    1s
     HIL Check is DUT power on
     HIL Power DUT Off
     HIL Check is DUT power off

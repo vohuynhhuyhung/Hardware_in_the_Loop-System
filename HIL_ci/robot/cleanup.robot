@@ -7,4 +7,6 @@ Suite Teardown      Disconnect from HIL
 
 *** Test Cases ***
 Power Off DUT
+    # Leave BOOT0 low so the next power-up runs the firmware, not the ROM bootloader.
+    HIL Set DUT BOOT0    0
     HIL Power DUT Off

@@ -118,7 +118,9 @@ class HILLibrary:
     # ------------------
     # FLASH FW
     # ------------------
+    @keyword("HIL Set DUT BOOT0")
     def set_dut_boot0(self, value):
+        value = int(value)
         if value not in [0, 1]:
             raise AssertionError("BOOT0 value must be 0 or 1")
         self._hil_cmd(f"dut_boot0_set {value}")
@@ -196,20 +198,29 @@ class HILLibrary:
             raise AssertionError(f"Firmware file not found: {fw_path}")
         
         logger.info("Entering DFU mode")
-        # Set DUT BOOT0 to 1 to enter USB bootloader mode and power on DUT to apply change
-        self.power_dut_off()
-        BuiltIn().sleep(1)
-        self.set_dut_boot0(1)
-        self.power_dut_on()
-        BuiltIn().sleep(1)
+        try:
+            # Set DUT BOOT0 to 1 to enter USB bootloader mode and power on DUT to apply change
+            self.power_dut_off()
+            BuiltIn().sleep(1)
+            self.set_dut_boot0(1)
+            self.power_dut_on()
+            BuiltIn().sleep(1)
 
-        # Check USB device is detected by HIL
-        self._wait_for_dfu_device()
-        logger.info("Waiting DFU stabilization...")
+            # Check USB device is detected by HIL
+            self._wait_for_dfu_device()
+            logger.info("Waiting DFU stabilization...")
 
-        # Flash fimware by using STM32 programmer CLI
-        self._flash_via_stm32_cli(fw_path)
-        
+            # Flash fimware by using STM32 programmer CLI
+            self._flash_via_stm32_cli(fw_path)
+        except BaseException:
+            # Never leave BOOT0=1: the DUT would boot into the ROM bootloader on next power-up
+            try:
+                self.set_dut_boot0(0)
+                BuiltIn().sleep(0.5)
+                self.power_dut_cycle()
+            finally:
+                raise
+
         logger.info("Leaving DFU mode")
         # After flashing, set BOOT0 back to 0 and reboot DUT to run new firmware
         self.set_dut_boot0(0)
