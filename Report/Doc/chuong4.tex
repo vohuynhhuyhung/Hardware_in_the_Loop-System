@@ -1,0 +1,366 @@
+\chapter{THIẾT KẾ VÀ THỰC HIỆN PHẦN MỀM NHÚNG CHO HIL GENERATOR}
+\section{Yêu cầu thiết kế}
+Các yêu cầu thiết kế chính cho phần mềm nhúng trên hệ thống mô phỏng phần cứng trong HIL Generator bao gồm:
+\begin{itemize}
+    \item HIL Generator phải có khả năng giao tiếp USB với máy tính để nhận lệnh cấu hình và điều khiển mô phỏng.
+    \item HIL Generator phải có khả năng giao tiếp với DUT thông qua các giao thức ngoại vi phổ biến như UART, I2C, SPI,...
+    \item Hệ thống HIL Generator cần mô phỏng chính xác hành vi của các thiết bị ngoại vi, bao gồm việc tạo và xử lý tín hiệu đầu vào/đầu ra theo thời gian thực hoặc gần thời gian thực.
+    \item Phần mềm nhúng trên hệ thống HIL Generator phải có khả năng cấu hình linh hoạt các tham số giao tiếp như tốc độ truyền nhận, địa chỉ I2C, định dạng dữ liệu,...
+    \item Hệ thống HIL Generator cần hỗ trợ việc ghi nhận và phân tích dữ liệu giao tiếp để phục vụ mục đích debug và đánh giá hiệu suất của DUT.
+\end{itemize}
+
+\section{Lưu đồ giải thuật tổng quát của hệ thống HIL Generator}
+
+Lưu đồ giải thuật tổng quát chức năng của hệ thống HIL Generator được trình bày trong Hình \ref{fig:hil_generator_overview}.
+
+\clearpage
+\begin{sidewaysfigure}
+    \centering
+    \includegraphics[width=\textheight]{image/hil_generator_overview.png}
+    \caption{Lưu đồ giải thuật tổng quát các chức năng của hệ thống HIL Generator}
+    \label{fig:hil_generator_overview}
+\end{sidewaysfigure}
+\clearpage
+
+Dựa trên yêu cầu kiểm thử và khả năng mở rộng hệ thống, HIL Generator được thiết kế theo kiến trúc phân lớp chức năng. Hệ thống được chia thành 5 khối chức năng chính bao gồm: khối led heartbeat, khối giao tiếp, khối xử lý lệnh, khối ngoại vi và khối mô phỏng thiết bị ngoại vi. Chức năng của từng khối được mô tả như sau:
+
+\begin{itemize}
+    \item \textbf{Khối led heartbeat:} Đây là khối chức năng đơn giản nhất, có nhiệm vụ nhấp nháy một đèn LED trên bo mạch để báo hiệu rằng hệ thống HIL Generator đang hoạt động bình thường.
+    \item \textbf{Khối giao tiếp:} Khối này chịu trách nhiệm thiết lập và duy trì kết nối USB giữa hệ thống HIL Generator và máy tính. Nó đảm bảo việc nhận lệnh cấu hình và phản hồi kết quả về máy tính được diễn ra một cách ổn định và chính xác.
+    \item \textbf{Khối xử lý lệnh:} Khối xử lý lệnh tiếp nhận dữ liệu từ máy tính thông qua khối giao tiếp USB. Sau khi nhận lệnh, hệ thống tiến hành phân tích cú pháp và xác định loại lệnh tương ứng dựa trên bảng tra cứu lệnh. Mỗi lệnh sẽ được ánh xạ đến một hàm xử lý cụ thể trong hệ thống. Sau khi thực thi lệnh, hệ thống gửi phản hồi dữ liệu và return code về máy tính để thông báo trạng thái thực thi. Trong trường hợp thành công, return code trả về là OK. Ngược lại, hệ thống sẽ trả về các mã lỗi tương ứng như BAD\_CMD, TOO\_MANY\_ARGS, TOO\_FEW\_ARGS, INVALID\_ARG hoặc EXE\_FAILED.
+    \item \textbf{Khối ngoại vi:} Khối ngoại vi là một trong hai khối chức năng trung tâm của hệ thống HIL Generator, đảm nhiệm việc quản lý và điều khiển các giao tiếp ngoại vi như GPIO, ADC, DAC, PWM, UART và CAN. Các ngoại vi được khởi tạo với cấu hình mặc định ngay khi hệ thống bắt đầu hoạt động. Để thay đổi các thông số cấu hình hoặc điều khiển tín hiệu ngõ vào/ra, hệ thống cung cấp tập lệnh tương ứng cho người dùng. Các lệnh này được tổ chức thông qua bảng tra cứu lệnh của khối xử lý lệnh và được thực thi bởi các hàm xử lý trong khối ngoại vi.
+    \item \textbf{Khối mô phỏng thiết bị ngoại vi:} Đây là khối chức năng trung tâm còn lại của hệ thống HIL Generator, chịu trách nhiệm mô phỏng hành vi của các thiết bị ngoại vi phổ biến như EEPROM, RTC, Flash SPI,... Khối này đảm bảo việc tái tạo chính xác các chức năng và đặc tính của thiết bị ngoại vi nhằm phục vụ mục đích kiểm thử firmware của DUT. Các hành vi của khối này cũng được điều khiển bởi các lệnh từ khối xử lý lệnh và có thể được cấu hình linh hoạt để đáp ứng các yêu cầu kiểm thử khác nhau.
+\end{itemize}
+
+\section{Lưu đồ giải thuật chi tiết của khối xử lý lệnh}
+
+Để đảm bảo khả năng điều khiển linh hoạt từ máy tính, hệ thống HIL Generator triển khai một khối chuyên trách cho việc xử lý lệnh. Lưu đồ giải thuật của task này được minh họa trong Hình \ref{fig:HIL_CLI_task}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/HIL_CLI_task.jpg}
+    \caption{Lưu đồ giải thuật của task xử lý lệnh từ máy tính}
+    \label{fig:HIL_CLI_task}
+\end{figure}
+
+Khối xử lý lệnh hoạt động theo cơ chế vòng lặp vô hạn, liên tục chờ dữ liệu từ máy tính thông qua khối giao tiếp USB. Khi nhận được một lệnh, hệ thống tiến hành phân tích cú pháp và xác định loại lệnh tương ứng thông qua bảng tra cứu lệnh đã được định nghĩa trước đó. Mỗi lệnh sẽ được ánh xạ đến một hàm xử lý cụ thể trong khối ngoại vi hoặc khối mô phỏng thiết bị ngoại vi.
+
+Đối với các lệnh cấu hình, hệ thống HIL Generator cập nhật các tham số liên quan đến giao tiếp và mô phỏng, bao gồm tốc độ truyền, địa chỉ thiết bị, chế độ hoạt động và định dạng dữ liệu. Các thay đổi này được áp dụng ngay lập tức mà không cần khởi động lại hệ thống.
+
+Trong trường hợp nhận được lệnh điều khiển mô phỏng, hệ thống sẽ kích hoạt mô hình thiết bị ngoại vi tương ứng và thực hiện các thao tác mô phỏng cần thiết để trao đổi dữ liệu với DUT. Nếu lệnh không hợp lệ hoặc không được hỗ trợ, hệ thống gửi thông báo lỗi về máy tính để người dùng xử lý.
+
+Nhờ cơ chế xử lý lệnh theo bảng tra cứu, hệ thống có thể dễ dàng mở rộng thêm các chức năng mới mà không làm thay đổi kiến trúc tổng thể của phần mềm.
+
+\section{Lưu đồ giải thuật khởi tạo và vận hành của hệ thống HIL Generator}
+
+Lưu đồ giải thuật mô tả trình tự hoạt động chính của hệ thống HIL Generator được trình bày trong Hình \ref{fig:HIL_overview}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\textwidth]{image/HIL_overview.jpg}
+    \caption{Lưu đồ giải thuật quá trình khởi tạo của hệ thống HIL Generator}
+    \label{fig:HIL_overview}
+\end{figure}
+
+Quá trình hoạt động của hệ thống HIL Generator bắt đầu bằng giai đoạn khởi tạo. Trong giai đoạn này, vi điều khiển thực hiện cấu hình xung clock hệ thống và khởi tạo các ngoại vi cần thiết như USB, UART, I2C, SPI và các bộ định thời. Quá trình này đảm bảo các tài nguyên phần cứng được cấu hình đúng trước khi hệ thống bắt đầu xử lý mô phỏng và giao tiếp với DUT.
+
+Sau khi hoàn tất khởi tạo, hệ thống tiến hành tạo các task phục vụ cho việc xử lý lệnh từ máy tính, mô phỏng thiết bị ngoại vi và quản lý các giao tiếp ngoại vi. Trong suốt quá trình vận hành, hệ thống HIL Generator liên tục nhận các lệnh cấu hình và điều khiển mô phỏng từ máy tính, sau đó thực hiện các hành vi mô phỏng tương ứng và gửi tín hiệu đến DUT.
+
+Nếu DUT phản hồi dữ liệu thông qua các giao thức ngoại vi, hệ thống HIL tiến hành xử lý và cập nhật trạng thái mô phỏng. Chu trình này được lặp lại liên tục, đảm bảo hệ thống HIL Generator hoạt động ổn định và đáp ứng kịp thời các yêu cầu kiểm thử firmware.
+
+Chi tiết về cơ chế quản lý và xử lý lệnh của từng ngoại vi sẽ được trình bày trong các phần tiếp theo.
+\subsection{Xử lý GPIO}
+
+Hệ thống HIL Generator hỗ trợ chức năng điều khiển và giám sát các chân GPIO nhằm phục vụ kiểm thử các tín hiệu số của DUT. Các chân GPIO được cấu hình sẵn theo hai chế độ input và output tùy theo mục đích sử dụng trong hệ thống.
+
+Người dùng có thể thực hiện các thao tác đọc trạng thái GPIO, ghi mức logic hoặc liệt kê danh sách các chân GPIO khả dụng thông qua giao diện CLI. Toàn bộ các chân GPIO được quản lý thông qua một bảng cấu hình ở mức phần mềm, trong đó lưu trữ thông tin về cổng GPIO, số chân và hướng hoạt động tương ứng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/hil_gpio.png}
+    \caption{Lưu đồ giải thuật xử lý GPIO}
+    \label{fig:hil_gpio}
+\end{figure}
+
+Khi nhận được lệnh GPIO từ máy tính, hệ thống sẽ tiến hành phân tích cú pháp để xác định loại thao tác tương ứng bao gồm đọc GPIO, ghi GPIO hoặc liệt kê danh sách GPIO.
+
+Đối với lệnh ghi GPIO, hệ thống trước tiên sẽ kiểm tra tính hợp lệ của cổng GPIO và số chân yêu cầu. Sau đó, hệ thống tìm kiếm chân GPIO tương ứng trong bảng quản lý cấu hình. Nếu chân GPIO không tồn tại hoặc đang được cấu hình ở chế độ input, yêu cầu ghi dữ liệu sẽ bị từ chối nhằm tránh xung đột điều khiển phần cứng.
+
+Trong trường hợp chân GPIO hợp lệ và được cấu hình ở chế độ output, hệ thống sẽ cập nhật mức logic của chân GPIO tương ứng thông qua các thanh ghi điều khiển phần cứng của vi điều khiển STM32. Sau khi hoàn tất cập nhật, hệ thống gửi thông báo trạng thái thực thi về giao diện console.
+
+Đối với lệnh đọc GPIO, hệ thống thực hiện kiểm tra tính hợp lệ của chân GPIO và tiến hành đọc trạng thái hiện tại của chân tương ứng. Nếu chân được cấu hình ở chế độ input, hệ thống đọc trực tiếp trạng thái logic từ thanh ghi input. Ngược lại, nếu chân ở chế độ output, trạng thái được đọc từ thanh ghi output nhằm phản ánh chính xác mức logic đang được xuất ra phần cứng.
+
+Ngoài ra, hệ thống còn hỗ trợ chức năng liệt kê toàn bộ GPIO khả dụng trong bảng quản lý cấu hình. Với mỗi chân GPIO, hệ thống sẽ hiển thị thông tin về cổng GPIO, số chân, hướng hoạt động và trạng thái logic hiện tại. Cơ chế này giúp người dùng dễ dàng giám sát trạng thái hoạt động của toàn bộ GPIO trong quá trình kiểm thử firmware.
+
+\subsection{Xử lý ADC/DAC}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/hil_adc_dac.jpg}
+    \caption{Lưu đồ giải thuật xử lý ADC và DAC}
+    \label{fig:hil_adc_dac}
+\end{figure}
+Lưu đồ mô tả giải thuật xử lý cho ADC và DAC. Khi nhận được lệnh đọc ADC, HIL Generator sẽ thu thập giá trị Raw 12 bit từ ADC. Giá trị này được chuyển đổi sang mức điện áp $mV$ theo công thức: $V_{mV}=\dfrac{Raw \cdot 3.3}{2^{12}-1} \cdot 1000$ và tiến hành in kết quả lên Console.
+
+Đối với lệnh cấu hình mức điện áp cho DAC, hệ thống sẽ nhận giá trị điện áp mong muốn dưới dạng một chuỗi ký tự.
+Ở bước đầu sẽ kiểm tra trong chuỗi có dấu thập phân hay không. Nếu có thì cần phải đảm bảo sau dấu thập phân chỉ có 1 chữ số.
+Sau đó chuỗi sẽ được chuyển thành số thực và tiếp tục kiểm tra giá trị điện áp có nằm trong dải điện áp an toàn của phần cứng từ 0.0V đến 3.3V không.
+Khi có các vi phạm trong quá trình kiểm tra trên, hệ thống sẽ không thực thi và in ra thông báo lỗi. Khi mức điện áp đầu vào được xác nhận là hoàn toàn hợp lệ, thuật toán sẽ áp dụng phương trình chuyển đổi ngược $Raw_{DAC} = \dfrac{V_{input}}{3.3} \cdot 4095$ để ánh xạ mức điện áp thành một giá trị nguyên 12 bit tương ứng.
+Cuối cùng, giá trị này được ghi vào DAC và xuất tín hiệu điện áp.
+
+\subsection{Tạo sóng sin / sóng tam giác}
+Về bản chất, tín hiệu Analog là tín hiệu liên tục theo thời gian và có thể được biểu diễn bởi các mức điện áp thay đổi liên tục.
+Để có thể tái tạo tín hiệu Analog bằng hệ thống số, tín hiệu sẽ được cập nhật thành nhiều giá trị điện áp rời rạc tại các thời điểm khác nhau. Nếu khoảng thời gian giữa các lần cập nhật càng nhỏ, hay nói cách khác tần số lấy mẫu càng cao, thì tín hiệu tạo ra sẽ càng tiệm cận với dạng sóng Analog ban đầu và trở nên mượt hơn.
+Tần số thực hiện các lần cập nhật này được gọi là tần số lấy mẫu ($f_{sample}$).
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{image/hil_wave_sample.jpg}
+    \caption{Quá trình lấy mẫu để tái tạo tín hiệu analog}
+    \label{fig:hil_wave_sample}
+\end{figure}
+
+Từ lý thuyết trên, HIL Generator sẽ thực hiện chức năng tạo sóng sin / tam giác thông qua việc kết hợp DAC, DMA và Timer để tối ưu hóa hiệu suất và đảm bảo tính thời gian thực.
+Tần số của Timer ($f_{sample}$) sẽ kích hoạt sự kiện để DMA lấy 1 giá trị trong mảng vùng nhớ để nạp vào DAC và để tạo nên một chu kỳ sóng hoàn chỉnh ta cần $N$ mẫu.
+Từ đó ta có thể tính được tần số của sóng như sau:
+\begin{equation}
+    f_{wave} = \dfrac{f_{sample}}{N}
+    \label{eq:f_wave}
+\end{equation}
+
+Để tạo được dạng sóng đủ mượt mà không làm giảm quá nhiều tần số của sóng, chọn $N=100$. Với $f_{sample_{max}}$ của hệ thống là 1 $MHz$, tần số tối đa của sóng là 10$kHz$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/hil_wave.jpg}
+    \caption{Sơ đồ máy trạng thái của chức năng tạo sóng}
+    \label{fig:hil_wave}
+\end{figure}
+Chức năng tạo sóng được thiết kế theo sơ đồ máy trạng thái trên với 4 trạng thái chính: \texttt{IDLE} (chờ lệnh cài đặt tần số), \texttt{READY} (chờ lệnh tạo sóng), \texttt{\texttt{SINE}} (tạo sóng sin), \texttt{TRIANGLE} (tạo sóng tam giác).
+
+HIL Generator sẽ cấu hình các ngoại vi cần thiết để thực hiện việc tạo sóng. Trong giai đoạn này, HIL Generator cũng sẽ khởi tạo 2 buffer cho sóng sin và sóng tam giác với số lượng 100 mẫu cho mỗi buffer, công thức cho mỗi dạng sóng sẽ được tính toán ở phần dưới.
+Sau giai đoạn khởi tạo, hệ thống sẽ vào trạng thái \texttt{IDLE} để chờ lệnh cấu hình tần số. Khi tần số được cấu hình hợp lệ ($0 < freq \le 10000$), hệ thống chuyển sang trạng thái \texttt{READY} và tính toán tần số cho Timer.
+Khi người dùng gửi lệnh bắt đầu tạo sóng sin / tam giác, hệ thống sẽ chuyển sang trạng thái \texttt{SINE} / \texttt{TRIANGLE} tương ứng và bắt đầu tạo sóng. Vì chức năng tạo sóng chỉ được thực hiện bởi 1 phần cứng DAC (PA4) nên tại một thời điểm chỉ có thể tạo được 1 dạng sóng.
+Cơ chế này giúp bảo vệ phần cứng không bị xung đột. Cuối cùng, khi có lệnh dừng việc tạo sóng, HIL Generator sẽ trở về trạng thái \texttt{IDLE}.
+
+DAC của STM32F407 có độ phân giải 12 bit, nên giá trị tối đa ($DAC\_MAX$) có thể xuất ra là $2^{12} - 1 = 4095$, tương ứng với mức điện áp 3.3V.
+
+\textbf{Công thức tính toán cho các dạng sóng:}
+
+Đối với sóng sin, biên độ của từng mẫu thứ $i$ (với $i$ chạy từ 0 đến $N-1$) được tính bằng hàm lượng giác và cộng thêm offset để đảm bảo giá trị luôn dương.
+\begin{equation}
+    V_{sine}[i] = \left( \sin\left(\dfrac{i \cdot 2\pi}{N}\right) + 1 \right) \cdot \dfrac{DAC\_MAX}{2} \cdot 0.98
+\end{equation}
+Trong đó, hệ số 0.98 được thêm vào nhằm giảm biên độ cực đại chống hiện tượng xén đỉnh.
+
+Đối với sóng tam giác, chu kỳ sóng được chia làm hai nửa đối xứng để tạo độ dốc tuyến tính.
+\begin{itemize}
+    \item Ở nửa chu kỳ tăng đầu tiên ($i < \dfrac{N}{2}$):
+    \begin{equation}
+        V_{triangle}[i] = \dfrac{2 \cdot DAC\_MAX \cdot i}{N}
+    \end{equation}
+    \item Ở nửa chu kỳ giảm tiếp theo ($i \ge \dfrac{N}{2}$):
+    \begin{equation}
+        V_{triangle}[i] = \dfrac{2 \cdot DAC\_MAX \cdot (N - i)}{N}
+    \end{equation}
+\end{itemize}
+
+\subsection{Tạo tín hiệu PWM}
+
+Hệ thống HIL Generator hỗ trợ tạo tín hiệu PWM nhằm phục vụ kiểm thử các chức năng điều khiển và đo lường của DUT. Các tín hiệu PWM được tạo bằng bộ định thời phần cứng của vi điều khiển STM32 nhằm đảm bảo khả năng tạo tín hiệu ổn định và có thể cấu hình động trong thời gian thực.
+
+Người dùng có thể điều khiển các kênh PWM thông qua giao diện CLI từ máy tính, bao gồm các thao tác khởi động, dừng, thay đổi tần số và điều chỉnh duty cycle của tín hiệu PWM.
+
+Lưu đồ giải thuật cho chức năng thay đổi tần số và duty cycle của tín hiệu PWM được trình bày trong Hình \ref{fig:hil_pwm_set_freq} và Hình \ref{fig:hil_pwm_set_duty}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{image/hil_pwm_set_freq.png}
+    \caption{Lưu đồ giải thuật thay đổi tần số của tín hiệu PWM}
+    \label{fig:hil_pwm_set_freq}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{image/hil_pwm_set_duty.png}
+    \caption{Lưu đồ giải thuật thay đổi duty cycle của tín hiệu PWM}
+    \label{fig:hil_pwm_set_duty}
+\end{figure}
+
+Khi nhận được lệnh thay đổi tần số PWM, hệ thống sẽ tiến hành kiểm tra giá trị tần số đầu vào nhằm đảm bảo nằm trong dải hoạt động cho phép của phần cứng Timer. Nếu giá trị không hợp lệ, hệ thống sẽ từ chối thực thi và gửi thông báo lỗi về giao diện console.
+
+Trong trường hợp giá trị hợp lệ, hệ thống sẽ tính toán giá trị thanh ghi Auto Reload Register (ARR) dựa trên tần số mong muốn theo công thức:
+\begin{equation}
+    ARR = \dfrac{f_{timer}}{PSC \cdot f_{PWM}} - 1
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+    \item $f_{timer}$ là tần số clock cấp cho Timer.
+    \item $PSC$ là hệ số chia prescaler của Timer.
+    \item $f_{PWM}$ là tần số PWM mong muốn.
+\end{itemize}
+
+Sau khi tính toán hoàn tất, giá trị ARR mới sẽ được cập nhật vào Timer để thay đổi chu kỳ tín hiệu PWM.
+
+Đối với chức năng thay đổi duty cycle, hệ thống sẽ kiểm tra giá trị phần trăm duty cycle đầu vào nhằm đảm bảo nằm trong khoảng từ 0\% đến 100\%. Nếu giá trị vượt ngoài giới hạn cho phép, hệ thống sẽ trả về thông báo lỗi và không thực hiện cập nhật.
+
+Khi giá trị duty cycle hợp lệ, hệ thống sẽ tính toán giá trị Compare Register (CCR) tương ứng theo công thức:
+\begin{equation}
+    CCR = \dfrac{Duty \cdot (ARR + 1)}{100}
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+    \item $Duty$ là duty cycle mong muốn theo đơn vị phần trăm.
+    \item $ARR$ là giá trị chu kỳ hiện tại của Timer.
+\end{itemize}
+
+Giá trị CCR sau đó được ghi vào thanh ghi compare của Timer để cập nhật độ rộng xung PWM tương ứng. Cơ chế này cho phép hệ thống thay đổi linh hoạt tần số và duty cycle của tín hiệu PWM trong thời gian thực mà không cần dừng hoạt động của Timer.
+
+
+\subsection{Xử lý UART/CAN}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/hil_uart_can.jpg}
+    \caption{Lưu đồ giải thuật giao tiếp UART và CAN}
+    \label{fig:hil_uart_can}
+\end{figure}
+Lưu đồ giải thuật trên mô tả quá trình xử lý truyền và nhận dữ liệu của khối giao tiếp UART và CAN trong hệ thống.
+Khi hệ thống hoạt động, chương trình sẽ kiểm tra lệnh cần xử lý. Nếu là lệnh truyền dữ liệu, hệ thống sẽ xác định kiểu dữ liệu cần gửi.
+Đối với dữ liệu dạng buffer, HIL Generator sẽ gửi toàn bộ khối dữ liệu có kích thước 256 byte thông qua giao thức UART hoặc CAN với các giá trị tăng dần từ 0x00 $\rightarrow$ 0xFF và lặp lại.
+Trong trường hợp dữ liệu cần truyền là chuỗi ký tự, hệ thống sẽ gửi chuỗi được nhập đó đến DUT. Sau khi hoàn tất quá trình truyền, hệ thống chuyển sang trạng thái kết thúc truyền và sẵn sàng cho các yêu cầu tiếp theo.
+
+Đối với lệnh đọc dữ liệu, chương trình sẽ kiểm tra trạng thái của buffer nhận để xác định có dữ liệu mới hay không. Nếu buffer chưa có dữ liệu, quá trình đọc sẽ kết thúc.
+Nếu buffer đã chứa dữ liệu, chương trình sẽ lấy dữ liệu từ buffer và hiển thị ra console nhằm phục vụ cho mục đích giám sát.
+Dữ liệu sẽ được ghi vào buffer trong quá trình ngắt. Nếu buffer chưa đầy, dữ liệu mới sẽ được lưu vào buffer đồng thời cập nhật các pointer quản lý vị trí đọc và ghi.
+Trong trường hợp buffer bị tràn, hệ thống sẽ ghi đè dữ liệu cũ của buffer.
+
+Cơ chế ngắt nhận dữ liệu sẽ được phần cứng tự động kích hoạt mỗi khi có một khung truyền được gửi đến. Tuy nhiên dựa vào Hình \ref{fig:uart_frame} và Hình \ref{fig:can_frame} có thể thấy UART và CAN có khung truyền khác nhau.
+Với UART, mỗi khung truyền chỉ có 1 byte dữ liệu nhưng giao thức CAN có thể linh hoạt độ dài của dữ liệu bằng trường DLC cho phép độ dài vùng dữ liệu dao động từ 0 - 8 byte.
+Chính vì thế quá trình xử lý ngắt cho UART và CAN được thiết kế với vài điểm khác biệt.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{image/hil_can.jpg}
+    \caption{Lưu đồ giải thuật xử lý ngắt nhận của giao thức CAN}
+    \label{fig:hil_can}
+\end{figure}
+Hình \ref{fig:hil_can} mô tả thuật toán xử lý dữ liệu cho giao thức CAN khi có ngắt nhận. Khi một frame CAN được nhận, HIL Generator sẽ trước tiên đọc giá trị từ trường DLC (Data Length Code) để xác định số byte dữ liệu cần xử lý. 
+Dựa trên giá trị này, hệ thống thực hiện vòng lặp để lần lượt đọc từng byte dữ liệu và lưu vào buffer. Sau mỗi lần lưu, con trỏ buffer sẽ được tăng lên để chuẩn bị cho vị trí lưu trữ tiếp theo.
+Quá trình này tiếp tục cho đến khi toàn bộ số byte tương ứng với giá trị DLC được xử lý hoàn tất, sau đó chương trình sẽ thoát khỏi trình phục vụ ngắt.
+
+Đối với giao tiếp UART, cơ chế xử lý đơn giản hơn do dữ liệu được nhận theo từng byte riêng lẻ. Mỗi khi xảy ra ngắt nhận, hệ thống sẽ đọc một byte dữ liệu và lưu trực tiếp vào buffer. Sau đó, con trỏ buffer được tăng lên để chuẩn bị cho lần nhận tiếp theo.
+
+\section{Lưu đồ giải thuật chi tiết mô phỏng thiết bị ngoại vi}
+\subsection{Mô phỏng thiết bị ngoại vi giao tiếp I2C}
+
+Hệ thống HIL Generator hỗ trợ mô phỏng các thiết bị ngoại vi giao tiếp I2C nhằm phục vụ quá trình kiểm thử firmware của DUT. Trong phạm vi đề tài, hai thiết bị I2C được lựa chọn để mô phỏng là EEPROM và RTC do đây là các ngoại vi phổ biến trong nhiều hệ thống nhúng thực tế.
+
+Trong hệ thống, DUT đóng vai trò master I2C, trong khi HIL Generator hoạt động ở chế độ slave và phản hồi các yêu cầu truy cập từ DUT. Thay vì sử dụng các linh kiện phần cứng riêng biệt, các thiết bị ngoại vi được mô phỏng hoàn toàn bằng phần mềm trên vi điều khiển STM32 của hệ thống HIL.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/i2c_emu_overview.png}
+    \caption{Kiến trúc tổng quát framework mô phỏng thiết bị I2C}
+    \label{fig:i2c_emu_overview}
+\end{figure}
+
+Kiến trúc mô phỏng I2C được tổ chức theo dạng module nhằm tăng tính mở rộng và khả năng tái sử dụng mã nguồn. Trong đó, module quản lý thiết bị I2C chịu trách nhiệm tiếp nhận các sự kiện giao tiếp từ ngoại vi I2C của vi điều khiển, xác định địa chỉ truy cập của DUT và định tuyến yêu cầu đến mô hình thiết bị tương ứng.
+
+\subsubsection{Cơ chế quản lý thiết bị I2C}
+
+Các thiết bị I2C mô phỏng được quản lý thông qua một bảng quản lý thiết bị ở mức phần mềm. Mỗi phần tử trong bảng lưu trữ các thông tin như loại thiết bị, địa chỉ I2C và trạng thái hoạt động tương ứng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=0.45\textheight]{image/I2C_device_init.png}
+    \caption{Quy trình khởi tạo thiết bị I2C mô phỏng}
+    \label{fig:I2C_device_init}
+\end{figure}
+
+Khi nhận được lệnh cấu hình từ máy tính, hệ thống tiến hành kiểm tra tính hợp lệ của địa chỉ I2C yêu cầu. Nếu địa chỉ đã tồn tại trong danh sách quản lý, yêu cầu khởi tạo sẽ bị từ chối nhằm tránh xung đột trên bus I2C. Ngược lại, nếu địa chỉ hợp lệ, hệ thống sẽ khởi tạo thiết bị tương ứng và lưu thông tin vào bảng quản lý thiết bị.
+
+Cơ chế này cho phép hệ thống HIL Generator quản lý linh hoạt nhiều thiết bị I2C khác nhau mà không phụ thuộc trực tiếp vào số lượng địa chỉ slave phần cứng được hỗ trợ bởi vi điều khiển.
+
+\subsubsection{Cơ chế xử lý callback và định tuyến thiết bị}
+
+Hệ thống HIL Generator sử dụng cơ chế ngắt và callback của thư viện HAL để xử lý các sự kiện giao tiếp I2C. Vi điều khiển STM32 hoạt động ở chế độ slave listen mode và liên tục chờ yêu cầu truy cập từ DUT.
+
+Khi DUT gửi địa chỉ slave lên bus I2C, callback xử lý địa chỉ sẽ được kích hoạt. Hệ thống tiến hành xác định loại thiết bị tương ứng dựa trên địa chỉ truy cập, sau đó chuyển hướng quá trình xử lý đến module mô phỏng phù hợp như EEPROM hoặc RTC.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/I2C_dispatch.png}
+    \caption{Cơ chế định tuyến callback trong framework mô phỏng I2C}
+    \label{fig:I2C_dispatch}
+\end{figure}
+
+Kiến trúc này giúp tách biệt lớp giao tiếp phần cứng I2C và logic xử lý của từng thiết bị ngoại vi, từ đó giúp hệ thống dễ dàng mở rộng khi cần bổ sung thêm các thiết bị I2C mới trong tương lai.
+
+\subsubsection{Mô phỏng EEPROM}
+
+Thiết bị EEPROM được mô phỏng nhằm phục vụ kiểm thử các chức năng đọc và ghi dữ liệu không mất nguồn của DUT. Toàn bộ dữ liệu EEPROM được lưu trữ trong vùng nhớ RAM của vi điều khiển HIL Generator nhằm tăng tốc độ truy cập và đơn giản hóa quá trình kiểm thử.
+
+Bộ nhớ EEPROM mô phỏng được tổ chức theo từng trang tương tự các EEPROM thực tế. Trong quá trình ghi dữ liệu, dữ liệu nhận được từ DUT không được ghi trực tiếp vào vùng nhớ chính mà trước tiên được lưu tạm vào bộ đệm ghi trang.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/EEPROM_memory.png}
+    \caption{Cơ chế ghi dữ liệu theo trang của EEPROM mô phỏng}
+    \label{fig:EEPROM_memory}
+\end{figure}
+
+Khi DUT kết thúc phiên giao tiếp I2C, dữ liệu trong bộ đệm mới được ghi chính thức vào vùng nhớ EEPROM mô phỏng. Cơ chế này giúp hành vi ghi dữ liệu của EEPROM mô phỏng tương đương với EEPROM thực tế, bao gồm cơ chế tự tăng địa chỉ và giới hạn kích thước ghi theo từng trang.
+
+Trong quá trình đọc dữ liệu, hệ thống HIL Generator truy xuất dữ liệu trực tiếp từ vùng nhớ mô phỏng và phản hồi lại DUT thông qua giao tiếp I2C. Sau mỗi byte dữ liệu được truyền thành công, địa chỉ truy cập sẽ tự động tăng để mô phỏng cơ chế đọc liên tục của EEPROM thực tế.
+
+\subsubsection{Mô phỏng RTC}
+
+Ngoài EEPROM, hệ thống HIL Generator còn hỗ trợ mô phỏng thiết bị RTC nhằm kiểm thử các chức năng liên quan đến thời gian thực của DUT.
+
+RTC mô phỏng được xây dựng dựa trên cấu trúc thanh ghi tương thích với DS1307. Trong phạm vi đề tài, hệ thống chỉ triển khai các thanh ghi chức năng cơ bản từ địa chỉ 0x00 đến 0x07, bao gồm các thanh ghi thời gian thực và thanh ghi điều khiển. Các vùng RAM mở rộng của DS1307 không được hỗ trợ do không cần thiết cho mục đích kiểm thử firmware trong đề tài.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/RTC_register.png}
+    \caption{Cấu trúc thanh ghi của RTC DS1307 mô phỏng}
+    \label{fig:RTC_register}
+\end{figure}
+
+Dữ liệu thời gian trong RTC mô phỏng được lưu trữ theo định dạng BCD tương tự DS1307 thực tế nhằm đảm bảo tính tương thích với firmware của DUT. Ngoài ra, bit CH (Clock Halt) trong thanh ghi giây cũng được hỗ trợ để cho phép dừng hoặc tiếp tục quá trình cập nhật thời gian nội bộ.
+
+Để đảm bảo khả năng hoạt động tương tự thiết bị thực, hệ thống HIL Generator sử dụng bộ định thời nội của vi điều khiển để cập nhật giá trị thời gian theo chu kỳ 1 giây.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/RTC_tick.png}
+    \caption{Quy trình cập nhật thời gian của RTC mô phỏng}
+    \label{fig:RTC_tick}
+\end{figure}
+
+Khi DUT thực hiện thao tác ghi dữ liệu lên RTC, byte đầu tiên được sử dụng để xác định địa chỉ thanh ghi truy cập. Các byte dữ liệu tiếp theo sẽ được ghi tuần tự vào các thanh ghi tương ứng. Trong trường hợp DUT thực hiện thao tác đọc, hệ thống HIL Generator sẽ phản hồi dữ liệu từ các thanh ghi RTC và tự động tăng con trỏ thanh ghi sau mỗi lần truyền thành công nhằm mô phỏng cơ chế truy cập liên tục của DS1307 thực tế.
+
+\subsection{Mô phỏng thiết bị ngoại vi giao tiếp SPI}
+
+Bên cạnh giao tiếp I2C, hệ thống HIL Generator còn hỗ trợ mô phỏng các thiết bị ngoại vi sử dụng giao thức SPI nhằm kiểm thử các chức năng firmware của DUT liên quan đến bộ nhớ ngoài. Trong phạm vi đề tài, thiết bị SPI được lựa chọn để mô phỏng là bộ nhớ Flash W25Q128, một linh kiện phổ biến trong các hệ thống nhúng dùng để lưu trữ chương trình và dữ liệu.
+
+Thiết bị Flash SPI được mô phỏng theo mô hình slave, trong đó hệ thống HIL Generator đóng vai trò phản hồi các lệnh truy cập từ DUT thông qua bus SPI. Toàn bộ nội dung bộ nhớ Flash được mô phỏng bằng vùng nhớ RAM trong vi điều khiển của HIL, cho phép truy cập nhanh và linh hoạt trong quá trình kiểm thử.
+
+Quy trình mô phỏng thiết bị SPI trong hệ thống HIL Generator được trình bày trong Hình~\ref{fig:SPI_flash}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.28\textwidth]{image/SPI_flash.png}
+    \caption{Quy trình mô phỏng bộ nhớ SPI flash trong hệ thống HIL}
+    \label{fig:SPI_flash}
+\end{figure}
+
+Quá trình mô phỏng SPI bắt đầu khi DUT kích hoạt tín hiệu Chip Select (NSS) ở mức thấp, báo hiệu một phiên giao tiếp SPI mới. Hệ thống HIL Generator sử dụng ngắt ngoài để phát hiện sự kiện này và tiến hành khởi tạo lại các biến trạng thái nội bộ, đảm bảo mỗi transaction SPI được xử lý độc lập và chính xác.
+
+Byte dữ liệu đầu tiên được DUT truyền đến được xem là lệnh điều khiển (opcode). Dựa trên opcode nhận được, hệ thống HIL Generator xác định loại lệnh tương ứng và chuyển sang trạng thái xử lý phù hợp. Trong phạm vi đề tài, các lệnh cơ bản của Flash SPI như đọc ID, đọc dữ liệu, ghi dữ liệu và xóa bộ nhớ được mô phỏng.
+
+Đối với lệnh đọc ID, hệ thống HIL Generator phản hồi lần lượt các byte định danh thiết bị, cho phép DUT xác nhận đúng loại Flash đang được sử dụng. Với lệnh đọc dữ liệu, sau khi nhận đủ địa chỉ truy cập, hệ thống bắt đầu truyền dữ liệu từ bộ nhớ mô phỏng về DUT, đồng thời tự động tăng địa chỉ để mô phỏng cơ chế đọc liên tục của Flash thực.
+
+Trong trường hợp lệnh ghi dữ liệu, hệ thống HIL Generator tiếp nhận dữ liệu từ DUT và lưu vào vùng nhớ mô phỏng tương ứng với địa chỉ đã chỉ định. Đối với lệnh xóa bộ nhớ, toàn bộ vùng nhớ mô phỏng được đưa về trạng thái mặc định, tương đương với quá trình xóa chip của Flash thực tế.
+
+Trong suốt quá trình giao tiếp SPI, hệ thống HIL Generator gửi các byte dummy khi cần thiết nhằm duy trì xung clock và đảm bảo đồng bộ truyền nhận giữa master và slave. Cơ chế này giúp DUT hoạt động bình thường mà không cần thay đổi firmware khi chuyển từ thiết bị Flash thực sang Flash mô phỏng.
+
+Việc mô phỏng thiết bị SPI trong hệ thống HIL Generator cho phép kiểm thử đầy đủ các chức năng liên quan đến bộ nhớ ngoài của DUT mà không cần sử dụng phần cứng Flash thật. Điều này giúp giảm chi phí phần cứng, đồng thời tăng tính linh hoạt và khả năng tự động hóa trong quá trình phát triển và kiểm thử firmware nhúng.

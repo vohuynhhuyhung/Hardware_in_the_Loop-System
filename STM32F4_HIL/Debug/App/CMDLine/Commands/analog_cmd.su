@@ -1,0 +1,8 @@
+../App/CMDLine/Commands/analog_cmd.c:13:12:cmd_adc_read	24	static
+../App/CMDLine/Commands/analog_cmd.c:24:12:cmd_adc_read_pwm	24	static
+../App/CMDLine/Commands/analog_cmd.c:36:12:Cmd_DAC_Set_Voltage	32	static
+../App/CMDLine/Commands/analog_cmd.c:65:5:Cmd_set_freq	24	static
+../App/CMDLine/Commands/analog_cmd.c:81:5:Cmd_get_freq	16	static
+../App/CMDLine/Commands/analog_cmd.c:95:5:Cmd_Sine_Wave	24	static
+../App/CMDLine/Commands/analog_cmd.c:136:5:Cmd_Triangle_Wave	24	static
+../App/CMDLine/Commands/analog_cmd.c:177:6:Cmd_Analog_Register	8	static

@@ -1,0 +1,16 @@
+../Drivers/CMSIS/Include/core_cm4.h:1672:26:__NVIC_GetPriorityGrouping	1
+../Drivers/CMSIS/Include/core_cm4.h:1684:22:__NVIC_EnableIRQ	2
+../Drivers/CMSIS/Include/core_cm4.h:1814:22:__NVIC_SetPriority	2
+../Drivers/CMSIS/Include/core_cm4.h:1861:26:NVIC_EncodePriority	2
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:310:22:LL_SPI_Enable	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:322:22:LL_SPI_Disable	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:378:22:LL_SPI_SetStandard	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:907:22:LL_SPI_EnableIT_RXNE	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:1113:22:LL_SPI_TransmitData8	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_bus.h:409:22:LL_AHB1_GRP1_EnableClock	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_bus.h:1185:22:LL_APB1_GRP1_EnableClock	1
+../App/EmuDrivers/Src/w25q_slave.c:25:6:W25Q_Slave_Init	1
+../App/EmuDrivers/Src/w25q_slave.c:30:6:Reset_W25Q	1
+../App/EmuDrivers/Src/w25q_slave.c:39:6:W25Q_Slave_IRQHandler	17
+../App/EmuDrivers/Src/w25q_slave.c:107:6:W25Q_PrepareData	3
+../App/EmuDrivers/Src/w25q_slave.c:119:6:SPI3_Reset	1

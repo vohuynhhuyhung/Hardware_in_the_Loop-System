@@ -1,0 +1,17 @@
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:744:26:LL_SPI_IsActiveFlag_RXNE	16	static
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:755:26:LL_SPI_IsActiveFlag_TXE	16	static
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:1090:25:LL_SPI_ReceiveData8	16	static
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_spi.h:1113:22:LL_SPI_TransmitData8	24	static
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:881:22:LL_GPIO_SetOutputPin	16	static
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:910:22:LL_GPIO_ResetOutputPin	16	static
+../App/w25q_driver/w25q_driver.c:29:13:SPI_TXRX_safe	24	static
+../App/w25q_driver/w25q_driver.c:38:13:W25Q_ReadStatus	24	static
+../App/w25q_driver/w25q_driver.c:49:13:W25Q_WaitBusy	24	static
+../App/w25q_driver/w25q_driver.c:60:6:W25Q_Init	16	static
+../App/w25q_driver/w25q_driver.c:64:6:W25Q_read_id	24	static
+../App/w25q_driver/w25q_driver.c:79:13:W25Q_write_enable	24	static
+../App/w25q_driver/w25q_driver.c:91:6:W25Q_page_program	32	static
+../App/w25q_driver/w25q_driver.c:117:6:W25Q_write	32	static
+../App/w25q_driver/w25q_driver.c:140:6:W25Q_read	32	static
+../App/w25q_driver/w25q_driver.c:163:6:W25Q_fast_read	32	static
+../App/w25q_driver/w25q_driver.c:184:6:W25Q_chip_erase	24	static

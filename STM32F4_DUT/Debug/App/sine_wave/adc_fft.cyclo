@@ -1,0 +1,5 @@
+../App/sine_wave/adc_fft.c:32:17:Process_FFT_And_Reply	2
+../App/sine_wave/adc_fft.c:58:13:FFT_Processing_Task	2
+../App/sine_wave/adc_fft.c:68:6:HAL_ADC_ConvCpltCallback	3
+../App/sine_wave/adc_fft.c:81:6:ADC_FFT_Init	1
+../App/sine_wave/adc_fft.c:87:6:ADC_FFT_TriggerCapture	1

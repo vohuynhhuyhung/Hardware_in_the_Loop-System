@@ -1,0 +1,29 @@
+# STM32CubeIDE
+.metadata/
+
+*.o
+*.d
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+*.siz
+
+# CubeMX
+*.ioc.autosave
+*.mxproject
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Robot Framework output
+output.xml
+log.html
+report.html
+*.log

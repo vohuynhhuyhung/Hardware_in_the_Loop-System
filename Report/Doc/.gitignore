@@ -1,0 +1,33 @@
+# Ignore all LaTeX build files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.brf
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.pdf
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*.gz
+
+# Ignore backup files
+*.bak
+*.tmp
+*.swp
+*~
+
+# Ignore folders created by TeX editors
+out/
+build/

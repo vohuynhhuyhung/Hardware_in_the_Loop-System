@@ -1,0 +1,295 @@
+\chapter{THIẾT KẾ VÀ THỰC HIỆN PHẦN MỀM TRÊN MÁY TÍNH}
+
+Trong hệ thống Hardware-in-the-Loop, phần mềm chạy trên máy tính đóng vai trò là trung tâm điều phối, cho phép người dùng cấu hình hệ thống, điều khiển quá trình mô phỏng và theo dõi trạng thái hoạt động của cả HIL và DUT. Phần mềm này không trực tiếp tham gia vào việc mô phỏng phần cứng mà đóng vai trò giao diện tương tác, hỗ trợ xây dựng và thực thi các kịch bản kiểm thử một cách linh hoạt.
+
+Thông qua phần mềm trên máy tính, người dùng có thể gửi các lệnh cấu hình đến hệ thống HIL, điều khiển DUT thực hiện các thao tác giao tiếp với thiết bị ngoại vi mô phỏng, đồng thời thu thập dữ liệu phản hồi phục vụ cho việc đánh giá và debug firmware.
+
+\section{Yêu cầu thiết kế}
+
+Các yêu cầu thiết kế chính cho phần mềm trên máy tính bao gồm:
+
+\begin{itemize}
+    \item Phần mềm phải cung cấp giao diện dòng lệnh (CLI) kết hợp giao diện đồ họa (GUI), dễ sử dụng, cho phép người dùng thao tác trực tiếp với HIL (Generator, Collector) và DUT.
+    \item Hỗ trợ giao diện điều khiển các tín hiệu HIL cho người dùng có thể sử dụng cho quá trình kiểm thử thiết bị DUT.
+    \item Phần mềm cần hỗ trợ kết nối đồng thời với nhiều cổng giao tiếp serial, phục vụ việc điều khiển HIL và DUT.
+    \item Hệ thống phải cho phép gửi các lệnh cấu hình và điều khiển mô phỏng đến HIL, đồng thời nhận và hiển thị phản hồi từ DUT và HIL theo thời gian thực.
+    \item Dữ liệu giao tiếp phải được ghi nhận đầy đủ để phục vụ mục đích debug và đánh giá kết quả kiểm thử.
+\end{itemize}
+
+\section{Sơ đồ giao tiếp giữa PC, HIL và DUT}
+
+Sơ đồ giao tiếp tổng thể giữa phần mềm trên máy tính, hệ thống HIL và DUT được minh họa trong Hình \ref{fig:PC_HIL_DUT}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/PC_HIL_DUT.png}
+    \caption{Sơ đồ giao tiếp giữa PC, HIL và DUT}
+    \label{fig:PC_HIL_DUT}
+\end{figure}
+
+Phần mềm trên máy tính giao tiếp với hệ thống HIL và DUT thông qua giao tiếp USB (serial). Các lệnh cấu hình và điều khiển được gửi từ PC đến HIL hoặc DUT, trong khi dữ liệu phản hồi từ các thiết bị này được gửi ngược lại để hiển thị và phân tích.
+
+PC đóng vai trò điều khiển trung tâm, hỗ trợ gửi lệnh xuống cho cả HIL và DUT. HIL sau khi nhận lệnh sẽ tiến hành cấu hình và chuẩn bị môi trường mô phỏng phần cứng hoặc tạo các tín hiệu tương ứng. Tiếp theo, PC gửi các lệnh điều khiển đến DUT, cho phép DUT giao tiếp trực tiếp với HIL, qua đó mô phỏng quá trình tương tác giữa DUT và các thiết bị ngoại vi trong điều kiện vận hành thực tế.
+
+Trong suốt quá trình kiểm thử, PC liên tục thu thập dữ liệu phản hồi từ cả DUT và HIL, tiến hành đánh giá kết quả kiểm thử và hiển thị thông tin cho người dùng. Toàn bộ quá trình này được tổ chức thành một vòng lặp, đảm bảo việc mô phỏng phần cứng và kiểm thử hệ thống được thực hiện một cách tự động, nhất quán và hiệu quả.
+
+\section{Lưu đồ giải thuật tổng quát của phần mềm trên máy tính}
+
+Lưu đồ giải thuật tổng quát mô tả hoạt động của phần mềm trên máy tính được trình bày trong Hình \ref{fig:PC_overview}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.05\textwidth]{image/App_overview.jpg}
+    \caption{Lưu đồ giải thuật tổng quát cho phần mềm trên máy tính}
+    \label{fig:PC_overview}
+\end{figure}
+
+Phần mềm trên máy tính được thiết kế theo mô hình đa luồng (Multi-threading). Sự phân tách này nhằm tách biệt hoàn toàn luồng hiển thị giao diện (Main UI Thread) khỏi các luồng xử lý giao tiếp với phần cứng.
+Qua đó đảm bảo việc cập nhật giao diện luôn mượt mà và không bị gián đoạn khi hệ thống phải xử lý các tác vụ truyền nhận serial.
+
+Quá trình khởi động ứng dụng bắt đầu bằng việc khởi tạo cửa sổ chính \texttt{QMainWindow}. Để tối ưu hóa không gian hiển thị và phân tách logic điều khiển cho người dùng, bộ quản lý không gian làm việc \texttt{QTabWidget} được triển khai, đóng vai trò như một bộ định tuyến cho phép chuyển đổi linh hoạt giữa các tab khác nhau bằng cách chọn vào tab tương ứng.
+Trong đó Serial Tab chịu trách nhiệm cấu hình các thông số cho cổng giao tiếp trước khi kết nối. Các tab chức năng như Generator, Collector có nhiệm vụ tiếp nhận các lệnh điều khiển thông qua cổng serial, đồng thời xử lý và cập nhật kết quả lên giao diện người dùng.
+Riêng Terminal Tab được thiết kế để người dùng có thể tương tác với phần cứng bằng cách gửi các lệnh thủ công.
+
+Nhằm đáp ứng yêu cầu giao tiếp đồng thời với nhiều thiết bị phần cứng, Serial Thread sẽ có 3 luồng chuyên biệt, hoạt động song song. Cụ thể, luồng \textbf{Generator} quản lý lệnh điều khiển và giám sát thiết bị giả lập phần cứng; luồng \textbf{Collector} chịu trách nhiệm giao tiếp, thu thập chuỗi dữ liệu từ HIL Collector; luồng DUT đảm nhận việc truyền nhận dữ liệu với phần cứng đang được kiểm thử.
+
+Khối giao diện người dùng và luồng xử lý giao tiếp được liên kết với nhau theo cơ chế hướng sự kiện (Event-driven). Khi có thao tác điều khiển từ người dùng tại các tab, khối giao diện sẽ phát tín hiệu kích hoạt các tác vụ tương ứng trong các luồng Serial.
+Các luồng nền này tiến hành giao tiếp vật lý với phần cứng và ngay sau khi quá trình thực thi hoàn tất, chúng sẽ gửi tín hiệu mang theo dữ liệu trả về cho khối giao diện người dùng để tiến hành thực hiện các cập nhật cần thiết lên ứng dụng.
+
+\section{Lưu đồ giải thuật chi tiết của phần mềm trên máy tính}
+\subsection{Serial Tab}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{image/App_serial.jpg}
+    \caption{Lưu đồ giải thuật cấu hình cổng COM trong Serial Tab}
+    \label{fig:App_serial}
+\end{figure}
+Lưu đồ minh họa quy trình khởi tạo, phân loại và thiết lập kết nối với cổng COM trong Serial Tab. Quá trình bắt đầu bằng việc quét và trích xuất danh sách các cổng COM khả dụng trên máy tính.
+Người dùng sẽ chọn cổng COM mong muốn từ danh sách này, nếu có thay đổi khi có thiết bị được cắm vào hoặc rút ra, ứng dụng sẽ cho phép cập nhật lại danh sách bằng cách nhấn nút "Refresh COM".
+Tiếp theo, phần mềm sẽ phân nhánh logic dựa trên đặc điểm của thiết bị để tránh việc kết nối nhầm lẫn giữa HIL Generator, HIL Collector và DUT. Nếu cổng đang được cấu hình là cổng dành cho DUT thì ứng dụng sẽ mở khóa nút "Connect".
+Lý do là vì DUT là thiết bị đang được kiểm thử, được điều khiển nguồn thông qua HIL, nên việc kết nối với DUT sẽ là bước cuối cùng sau khi đã thiết lập xong các kết nối cần thiết với HIL Generator và HIL Collector.
+
+Ngược lại, đối với các thiết bị đóng vai trò hỗ trợ như HIL Generator và HIL Collector cần có cơ chế kết nối nghiêm ngặt hơn để đảm bảo các thiết bị đã được kết nối chính xác trước khi kết nối với DUT.
+Vì thế nút "Connect" sẽ mặc định bị vô hiệu hóa và chờ sự kiện "Scan device" từ người dùng. Khi quá trình quét được thực hiện, phần mềm sẽ tạm thời mở cổng COM trong khoảng 0.5 giây và truyền đi lệnh "i" để yêu cầu thiết bị trả về ID của thiết bị.
+Chỉ khi chuỗi dữ liệu phản hồi trùng khớp với ID đã được định nghĩa, phần mềm mới xác nhận thiết bị hợp lệ và cho phép tiến hành các bước tiếp theo.\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{image/App_serial_connect.jpg}
+    \caption{Kết nối cổng COM với các thiết bị}
+    \label{fig:App_serial_connect}
+\end{figure}
+
+% \subsection{Xử lý Memory Tab}
+% Tạm thời ẩn do tab này cũng chỉ là update UI
+\subsection{Collector Tab}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{image/App_la_overview.jpg}
+    \caption{Mô hình xử lý tác vụ trong Collector Tab}
+    \label{fig:App_la_overview}
+\end{figure}
+Collector Tab được xây dựng theo kiến trúc phân lớp chức năng. Lớp \textbf{Xử lý giao diện} đóng vai trò khởi tạo và quản lý các thành phần hiển thị của ứng dụng.
+Tiếp theo là lớp \textbf{Nhận dữ liệu Serial}, đây là tầng có nhiệm vụ nhận các sự kiện truyền nhận dữ liệu từ Thread Serial, sau đó thu thập và quản lý các dữ liệu thô được gửi từ HIL Collector.
+Lớp \textbf{Vẽ biểu đồ} sẽ xử lý việc chuyển đổi dữ liệu thô thành các dạng sóng trực quan. Cuối cùng là lớp \textbf{Xử lý thao tác chuột} giúp người dùng có thể tương tác với biểu đồ sóng.
+Sự phân cấp này giúp tách biệt giữa các chức năng khác nhau, tối ưu hóa hiệu suất.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/App_la.jpg}
+    \caption{Giao diện của Collector Tab}
+    \label{fig:App_la}
+\end{figure}
+
+\subsubsection{Lớp Xử lý giao diện và Nhận dữ liệu Serial}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/App_la_ui.jpg}
+    \caption{Lưu đồ giải thuật Xử lý giao diện và Nhận dữ liệu Serial}
+    \label{fig:App_la_ui}
+\end{figure}
+Lưu đồ giải thuật trên mô tả chi tiết quá trình thực hiện và phối hợp giữa hai lớp \textbf{Xử lý giao diện} và \textbf{Nhận dữ liệu Serial}.
+Quá trình bắt đầu tại khối giao diện, nơi hệ thống khởi tạo các thành phần hiển thị như nút nhấn, các lựa chọn cấu hình thông số (Số mẫu, Tốc độ lấy mẫu) và khu vực hiển thị biểu đồ sóng.
+Khi nút "Start" được nhấn, phần mềm sẽ thay đổi trạng thái của nút thành "Stop", đồng thời tiến hành dọn dẹp bộ đệm cũ và khởi động timer chịu trách nhiệm cập nhật biểu đồ.
+Ngay sau đó phần mềm sẽ gửi các thông số cấu hình gồm số mẫu và tốc độ lấy mẫu cùng với lệnh "F" đến HIL Collector để bắt đầu quá trình lấy mẫu.
+
+Sau khi lệnh khởi chạy được gửi đi, phần mềm sẽ thu thập dữ liệu. Khi có dữ liệu, phần mềm sẽ tiến hành lọc và chỉ lưu các giá trị $\ge$ 0x80 vào bộ đệm \texttt{raw\_buffer}.
+Vòng lặp thu thập này hoạt động liên tục cho đến khi nhận được cờ báo kết thúc "+" từ HIL Collector. Song song với quá trình này, lớp \textbf{Xử lý giao diện} vẫn giám sát trạng thái từ người dùng.
+Nếu người dùng nhấn nút "Stop", phần mềm sẽ khôi phục nút về trạng thái "Start", dừng timer cập nhật biểu đồ và gửi "+" đến HIL Collector để kết thúc quá trình lấy mẫu.
+\subsubsection{Lớp Vẽ biểu đồ}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{image/App_la_draw.jpg}
+    \caption{Lưu đồ giải thuật Vẽ biểu đồ}
+    \label{fig:App_la_draw}
+\end{figure}
+Quá trình vẽ dạng sóng được thực hiện định kỳ mỗi khi timer đạt chu kỳ 30ms. Ngay khi được kích hoạt, phần mềm sẽ truy xuất dữ liệu từ bộ đệm \texttt{raw\_buffer} và tiến hành phân tích gói tin.
+Quá trình phân tích này sẽ kiểm tra dữ liệu dựa trên vị trí: nếu byte nằm ở vị trí chẵn sẽ là dữ liệu của tín hiệu số, sau đó thực hiện bitwise để phân tách từng bit và lưu vào các mảng của kênh digital tương ứng.
+Ngược lại, byte nằm ở vị trí lẻ là dữ liệu của tín hiệu tương tự, sẽ được lưu vào mảng của kênh analog. Sau đó thực hiện phép toán quy đổi ra mức điện áp theo các bước sau:
+\begin{enumerate}
+    \item Thực hiện phép \texttt{AND} với 0x7F để loại bỏ bit MSB
+    \item Thực hiện công thức quy đổi điện áp: $$V = \frac{\text{ADC\_Value}}{2^n - 1} \times V_{ref}$$ với $n=7$, $V_{ref}=3.3V$. 
+\end{enumerate}
+
+Sau khi toàn bộ dữ liệu đã được xử lý, phần mềm sẽ kiểm tra trạng thái hoạt động hiện tại. Nếu đang chạy, phần mềm sẽ trích xuất 2500 mẫu gần nhất từ các mảng để cập nhật dạng sóng.
+Khi đã dừng nhận dữ liệu, phần mềm sẽ hiển thị toàn bộ dạng sóng đã thu thập được từ mốc thời gian bắt đầu, cho phép người dùng quan sát và phân tích toàn cảnh tín hiệu.
+
+\subsubsection{Lớp Xử lý thao tác chuột}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/App_la_mouse.jpg}
+    \caption{Lưu đồ giải thuật Xử lý thao tác chuột}
+    \label{fig:App_la_mouse}
+\end{figure}
+Collector Tab cho phép người dùng thao tác trực tiếp trên không gian đồ thị thông qua các thao tác chuột:
+\begin{itemize}
+    \item[-] \textbf{Thao tác rê chuột:} Khi người dùng di chuyển con trỏ qua không gian đồ thị, hệ thống sẽ điều khiển một đường gióng dọc di chuyển đồng bộ theo tọa độ con trỏ.
+    Cùng lúc đó, phần mềm sẽ truy xuất mảng dữ liệu và hiển thị trực tiếp mức điện áp ngay tại thời điểm tương ứng của kênh tín hiệu Analog. Tính năng này giúp người dùng dễ dàng kiểm tra nhanh dữ liệu tại từng điểm lấy mẫu.
+    \item[-] \textbf{Thao tác nhấn đúp chuột:} Người dùng có thể nhấn đúp chuột vào bất kì kênh tín hiệu nào để có thể xem được các thông số. Thao tác này sẽ tạo ra một vùng quét (cửa sổ) xung quanh vị trí nhấn. Đối với kênh Digital sẽ hiển thị tần số và độ rộng xung, còn đối với kênh Analog sẽ hiển thị tần số và $V_{p-p}$.
+    \item[-] \textbf{Thao tác kéo / giãn vùng quét:} Khi thực hiện kéo / giãn vùng quét, phần mềm sẽ tiến hành trích xuất toàn bộ dữ liệu bên trong ranh giới vùng này.
+    Sau đó sẽ sử dụng các thuật toán để tính các thông số gồm tần số, độ rộng xung (cho kênh Digital), $V_{p-p}$ (cho kênh Analog). Dữ liệu sau khi được xử lý sẽ được cập nhật và hiển thị trực tiếp lên vùng được quét.
+    \item[-] \textbf{Thao tác nhấn chuột ngoài vùng quét:} Khi người dùng nhấn chuột vào bất kỳ khu vực trống nào ngoài phạm vi vùng quét, phần mềm sẽ tự động tắt và ẩn vùng quét đi, đóng vai trò như một lệnh hủy để giải phóng vùng nhìn.
+\end{itemize}
+
+Để vùng quét có thể hiển thị được các thông số, phần mềm cần thực hiện các thuật toán để có thể tính được các thông số này.
+Lưu đồ giải thuật bên dưới sẽ làm rõ cách tính toán tần số, độ rộng xung và $V_{p-p}$.\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{image/App_la_mouse_pull.jpg}
+    \caption{Lưu đồ giải thuật tính toán tần số, độ rộng xung}
+    \label{fig:App_la_mouse_pull}
+\end{figure}
+Ở giai đoạn đầu, phần mềm sẽ kiểm tra vùng quét và dữ liệu bên trong. Nếu vùng chọn không hợp lệ hoặc không có giá trị, phần mềm sẽ gán giá trị rỗng cho toàn bộ thông số và bỏ qua việc tính toán.
+Nếu hợp lệ, thuật toán sẽ quy đổi tọa độ thời gian lên đồ thị thành các chỉ số \texttt{start\_idx} và \texttt{end\_idx}. Từ đó có thể trích xuất đoạn tín hiệu nằm trong vùng này lưu vào \texttt{data\_slice} để phân tích.
+
+Sau khi đã lấy được dữ liệu trong vùng quét, phần mềm sẽ phân loại kênh để có thể xử lý dữ liệu:
+\begin{itemize}
+    \item[-] \textbf{Kênh Analog:} Phần mềm tiến hành tìm kiếm giá trị cực đại (max) và cực tiểu (min) trong mảng \texttt{data\_slice} để đánh giá biên độ dao động. 
+    Nếu biên độ chênh lệch nhỏ hơn 0.1V, tín hiệu được xem là phẳng không có dao động. Khi đó tổng số cạnh lên và $V_{p-p}$ được gán bằng 0. 
+    Ngược lại, nếu biên độ đạt chuẩn, phần mềm sẽ tính toán điện áp đỉnh-đỉnh ($V_{p-p} = max - min$) và áp dụng thuật toán lọc Schmitt Trigger (Hysteresis) với ngưỡng kích hoạt cao ở 60\% và ngưỡng thấp ở 40\%. Cơ chế này giúp đếm chính xác tổng số cạnh lên của tín hiệu sóng tương tự bằng cách triệt tiêu các gai nhiễu.
+    
+    \item[-] \textbf{Kênh Digital:} Do đặc tính là xung vuông sắc nét với các mức logic 0/1 rõ ràng, phần mềm sẽ trực tiếp đếm tổng số điểm chuyển trạng thái từ 0 sang 1 (cạnh lên). 
+    Nếu mảng dữ liệu quét được chứa ít nhất 2 cạnh lên (tương đương với việc có tối thiểu 1 chu kỳ trọn vẹn), thuật toán sẽ tiếp tục thực thi. 
+    Để đảm bảo độ chính xác, phần mềm sẽ loại bỏ các phần dữ liệu dư thừa ở hai đầu mảng quét, chỉ giữ lại khối dữ liệu giới hạn giữa cạnh lên đầu tiên và cạnh lên cuối cùng (chứa các chu kỳ hoàn hảo). 
+    Từ đó, chu kỳ hoạt động (Duty cycle) được tính toán theo công thức: $\dfrac{\text{Số mẫu ở mức HIGH}}{\text{Tổng số mẫu}} \times 100\%$.
+\end{itemize}
+Cuối cùng là bước tính toán tần số. Đầu tiên thuật toán sẽ tính số chu kỳ bằng cách lấy số cạnh lên trừ 1.
+Sau đó tính toán khoảng thời gian thực tế thông qua tần số lấy mẫu. Tần số của tín hiệu lúc này sẽ được tính bằng công thức: $f = \dfrac{\text{Số chu kỳ}}{\text{Thời gian}}$.
+Kết thúc quá trình, toàn bộ tập thông số bao gồm Tần số, Duty Cycle và $V_{p-p}$ sẽ được định dạng và cập nhật trực tiếp lên nhãn hiển thị tại Vùng quét trên giao diện phần mềm.
+
+\subsection{Generator Tab}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/App_per_tab.jpg}
+    \caption{Sơ đồ khối các chức năng mô phỏng và giao tiếp trong Generator Tab}
+    \label{fig:App_per_tab}
+\end{figure}
+
+Generator Tab được thiết kế để cung cấp một giao diện trực quan cho người dùng trong việc điều khiển và giám sát DUT.
+Cấu trúc của giao diện được tổ chức thành 5 khối chức năng độc lập giúp HIL mô phỏng phần cứng và giao tiếp với DUT.
+
+Khối \textbf{PWM Generator} và \textbf{Waveform Generator} đóng vai trò điều khiển DUT tạo ra các xung tín hiệu, cho phép người dùng cài đặt tần số, tinh chỉnh độ rộng xung để điều khiển 4 kênh PWM, cũng như phát các dạng sóng analog như sine, tam giác.
+
+Khối \textbf{Potentiometer Simulation} cung cấp một thanh trượt để mô phỏng hành vi của một biến trở. Người dùng có thể điều chỉnh giá trị của biến trở này sau đó gửi lệnh đến HIL để tạo mức điện áp tương ứng, DUT sẽ đọc giá trị điện áp này và phản hồi về máy tính để hiển thị.
+
+Khối \textbf{GPIO Control } đảm nhiệm việc gửi lệnh điều khiển và hiển thị trạng thái của các chân IO.
+
+Khối \textbf{CAN Controller \& Monitor} hỗ trợ người dùng thao tác truyền tải dữ liệu qua giao thức CAN. Đồng thời, khối này cung cấp một bảng giám sát để theo dõi các gói tin CAN để phân tích và đánh giá các dữ liệu được truyền đi và nhận về.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{image/App_per_ui.jpg}
+    \caption{Giao diện của Generator Tab}
+    \label{fig:App_per_ui}
+\end{figure}
+
+\subsubsection{Khối PWM Generator}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/App_per_pwm.jpg}
+    \caption{Lưu đồ giải thuật khối PWM Generator}
+    \label{fig:App_per_pwm}
+\end{figure}
+Khối \textbf{PWM Generator} cho phép người dùng điều khiển 4 kênh PWM của HIL (Generator). Khi phần mềm khởi động, các nút "Start" của các kênh sẽ tạm thời bị khóa để đảm bảo quá trình cấu hình được thực hiện trước khi phát tín hiệu.
+Khi người dùng nhấn nút "Set Freq", phần mềm sẽ trích xuất giá trị tần số từ ô nhập liệu, đóng gói và gửi lệnh cấu hình tần số xuống HIL.
+Sau khi quá trình cấu hình hoàn tất, các nút "Start" sẽ được mở khóa, cho phép người dùng tiếp tục thao tác điều khiển.
+
+Tiếp theo, tại sự kiện người dùng nhấn nút "Start/Stop", phần mềm sẽ kiểm tra trạng thái hiện tại của kênh PWM. Nếu kênh chưa được kích hoạt, phần mềm sẽ chuyển trạng thái nút "Start" thành "Stop",
+sau đó tiến hành lấy giá trị duty cycle từ thanh trượt trên giao diện. Cuối cùng gửi lệnh cấu hình duty cycle và lệnh kích hoạt kênh PWM đến HIL.
+Nếu kênh đã được kích hoạt, phần mềm sẽ chuyển trạng thái nút "Stop" về "Start", đồng thời gửi lệnh tắt kênh PWM đến HIL để dừng phát tín hiệu.
+
+Quy trình này đảm bảo việc điều khiển PWM được thực hiện một cách tuần tự, tránh xung đột giữa các thao tác cấu hình và vận hành.
+
+\subsubsection{Khối Waveform Generator}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{image/App_per_wave.jpg}
+    \caption{Sơ đồ máy trạng thái khối Waveform Generator}
+    \label{fig:App_per_wave}
+\end{figure}
+Khối \textbf{Waveform Generator} được thiết kế và quản lý thông qua mô hình state machine gồm 3 trạng thái chính: \texttt{IDLE} (chờ), \texttt{SINE} (phát sóng sine), \texttt{TRIANGLE} (phát sóng tam giác).
+Ở trạng thái \texttt{IDLE}, hai nút điều khiển "Start Sine" và "Start Triangle" sẽ được mở khóa cho phép người dùng lựa chọn dạng sóng mong muốn.
+Phần mềm sẽ tiếp tục duy trì ở trạng thái này nếu tần số trong ô nhập liệu vượt ngưỡng cho phép (1Hz - 10kHz). Khi người dùng nhấn một trong hai nút "Start", phần mềm sẽ chuyển sang trạng thái tương ứng.
+
+Tại trạng thái \texttt{SINE} hoặc \texttt{TRIANGLE}, phần mềm sẽ đọc giá trị tần số được nhập, sau đó gửi lệnh cấu hình tần số kèm theo lệnh kích hoạt phát sóng đến HIL.
+Đồng thời, nút "Start" sẽ chuyển thành "Stop" và nút "Start" của dạng sóng còn lại sẽ bị khóa nhằm ngăn chặn việc kích hoạt đồng thời hai dạng sóng khác nhau.
+Cuối cùng, khi nút "Stop" được nhấn, phần mềm sẽ gửi lệnh dừng phát sóng đến HIL và chuyển trạng thái trở về \texttt{IDLE}.
+
+Việc sử dụng cơ chế khóa chéo giữa hai dạng sóng đảm bảo rằng chỉ có 1 dạng sóng được phát tại một thời điểm.
+Nguyên nhân là do HIL chỉ sử dụng một bộ DAC duy nhất thông qua chân PA4 để thực hiện việc phát sóng tín hiệu tương tự.
+Cơ chế này giúp tránh xung đột khi có nhiều luồng điều khiển truy cập vào phần cứng của HIL cùng lúc.
+
+\subsubsection{Khối GPIO Control}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/App_per_gpio.jpg}
+    \caption{Lưu đồ giải thuật khối GPIO Control}
+    \label{fig:App_per_gpio}
+\end{figure}
+Hình \ref{fig:App_per_gpio} mô tả lưu đồ giải thuật của khối \textbf{GPIO Control} trên phần mềm, cho phép người dùng thực hiện đọc và ghi trạng thái của HIL thông qua giao diện điều khiển.
+Sau khi hệ thống bắt đầu hoạt động, chương trình sẽ kiểm tra hành động của người dùng để xác định thao tác cần thực hiện là đọc GPIO hay ghi GPIO.
+
+Đối với chức năng đọc GPIO, thao tác này được kích hoạt khi người dùng nhấn nút \textbf{Read} trong khối GPIO Input trong giao diện.
+Ứng dụng sẽ lưu lại vị trí chân GPIO đang được chọn thông qua biến \texttt{pin\_idx}, sau đó gửi lệnh đọc xuống HIL theo câu lệnh \texttt{gpio\_read <port> <pin\_idx>} với \textbf{port E} là port mà HIL hỗ trợ.
+Khi nhận được phản hồi từ HIL, hệ thống sẽ tiến hành phân tích dữ liệu để xác định trạng thái logic của chân GPIO. Nếu giá trị nhận được là mức cao, giao diện sẽ cập nhật bằng cách bật đèn hiển thị tại vị trí chân tương ứng. Ngược lại, nếu giá trị là mức thấp thì đèn sẽ được tắt.
+Sau khi hoàn tất quá trình cập nhật giao diện, thông tin vị trí chân đang chờ sẽ được xóa để chuẩn bị cho lần thao tác tiếp theo.
+
+Đối với chức năng ghi GPIO, thao tác được thực hiện thông qua hai nút Set và Reset trên giao diện điều khiển. Khi người dùng nhấn Set, phần mềm sẽ gửi lệnh \texttt{gpio\_write <pin> 1} xuống cho HIL để điều khiển GPIO tương ứng lên mức logic cao.
+Sau khi lệnh được gửi thành công, trạng thái nút trên giao diện sẽ được cập nhật từ Set sang Reset để phản ánh trạng thái hiện tại của chân GPIO. Ngược lại, khi người dùng nhấn nút Reset, ứng dụng sẽ gửi lệnh \texttt{gpio\_write <pin> 0} để đưa chân GPIO về mức logic thấp và chuyển trạng thái nút từ Reset về Set.
+
+\subsubsection{Khối Potentiometer Simulation}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{image/App_per_dac.jpg}
+    \caption{Lưu đồ giải thuật khối Potentiometer Simulation}
+    \label{fig:App_per_dac}
+\end{figure}
+Khối \textbf{Potentiometer Simulation} được xây dựng trên phần mềm nhằm mô phỏng hoạt động của một biến trở thông qua DAC của HIL.
+Khối này cho phép người dùng thay đổi mức điện áp đầu ra bằng cách thao tác trực tiếp với thanh trượt trên giao diện điều khiển, từ đó tạo ra tín hiệu điện áp tương tự giống với hành vi của biến trở thực tế.
+
+Khi chương trình hoạt động, người dùng có thể kéo thanh trượt để thay đổi giá trị điện áp mong muốn. Giá trị đọc được từ thanh trượt sẽ được phần mềm quy đổi sang mức điện áp thực theo công thức $volt = \frac{value}{100.0}$, trong đó $value$ là giá trị hiện tại của thanh trượt.
+Sau quá trình quy đổi, giao diện sẽ cập nhật và hiển thị mức điện áp tương ứng để người dùng có thể quan sát trực tiếp giá trị đang được thiết lập.
+
+Sau khi lựa chọn được mức điện áp phù hợp, người dùng nhấn nút Set Voltage để xác nhận việc xuất tín hiệu. Ứng dụng sẽ gửi lệnh xuống HIL theo câu lệnh \texttt{dac\_set\_voltage <volt>}, yêu cầu hệ thống DAC của HIL xuất ra mức điện áp tương ứng tại chân analog.
+Trong trường hợp người dùng chưa nhấn nút xác nhận, hệ thống sẽ tiếp tục quay lại trạng thái chờ thao tác trên thanh trượt để cho phép điều chỉnh giá trị điện áp mới.
+
+% Thông qua cơ chế này, khối \textbf{Potentiometer Simulation} có thể mô phỏng linh hoạt hành vi của biến trở bằng tín hiệu analog tạo ra từ DAC, hỗ trợ kiểm thử các chức năng đọc ADC trên DUT mà không cần sử dụng phần cứng biến trở thực tế.
+
+\subsubsection{Khối CAN Controller \& Monitor}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.62\textwidth]{image/App_per_can.jpg}
+    \caption{Sơ đồ khối chức năng CAN Controller \& Monitor}
+    \label{fig:App_per_can}
+\end{figure}
+Sơ đồ minh họa cho quá trình giao tiếp của mạng CAN được chia thành ba đoạn riêng biệt:
+
+\textbf{Giai đoạn truyền dữ liệu:} quá trình sẽ được kích hoạt khi người dùng tương tác trên giao diện thông qua việc nhập chuỗi và nhấn "Send String", hoặc chọn gửi gói dữ liệu định sẵn bằng nút "Send 256 Byte buffer".
+Sau đó phần mềm sẽ ghi nhận tác vụ và hiển thị sự kiện này lên bảng giám sát Monitor. Đồng thời phần mềm sẽ truyền lệnh xuống hệ thống HIL để yêu cầu đóng gói dữ liệu.
+Tại đây, HIL sẽ tiến hành gửi gói dữ liệu đến thiết bị kiểm thử DUT thông qua bus CAN.
+
+\textbf{Giai đoạn DUT phản hồi và HIL lưu trữ:} Khi DUT nhận được dữ liệu từ bus CAN, thiết bị sẽ thực hiện cơ chế phản hồi vòng lặp (echo), gửi lại gói dữ liệu đó lên mạng CAN.
+HIL sẽ nhận gói tin và tiến hành lưu trữ cục bộ vào bộ nhớ đệm nội bộ của hệ thống.
+
+\textbf{Giai đoạn truy xuất dữ liệu từ HIL:} Quá trình gửi dữ liệu lên phần mềm chỉ thực sự diễn ra khi người dùng chủ động nhấn nút "Read CAN buffer".
+Khi đó phần mềm sẽ gửi lệnh yêu cầu HIL gửi những dữ liệu đã lưu. Hệ thống HIL sẽ lần lượt gửi ID của DUT và các byte dữ liệu thô dưới định dạng mã HEX.
+Phần mềm sẽ lưu trữ dữ liệu này đến khi nhận được tín hiệu xác nhận hoàn tất "OK" từ HIL. Sau đó phần mềm sẽ thực hiện chuyển đổi mã HEX sang định dạng ký tự ASCII.
+Cuối cùng, giao diện sẽ hiển thị toàn bộ gói tin cả định dạng HEX và ASCII lên bảng Monitor.

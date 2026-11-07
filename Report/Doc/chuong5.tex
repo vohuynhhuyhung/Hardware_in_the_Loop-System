@@ -1,0 +1,119 @@
+\chapter{THIẾT KẾ VÀ THỰC HIỆN PHẦN MỀM NHÚNG CHO HIL COLLECTOR}
+
+\section{Yêu cầu thiết kế}
+Các yêu cầu thiết kế chính cho phần mềm nhúng trên HIL Collector bao gồm:
+\begin{itemize}
+    \item Có khả năng giao tiếp USB với máy tính để nhận lệnh cấu hình và điều khiển.
+    \item Có khả năng thu thập các tín hiệu số và tín hiệu tương tự từ DUT.
+    \item Có tích hợp UART hỗ trợ debug.
+\end{itemize}
+
+\section{State machine tổng quát của HIL Collector}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/LA_state_machine.jpg}
+    \caption{State machine của HIL Collector}
+    \label{fig:LA_state_machine}
+\end{figure}
+
+Các trạng thái chính của HIL Collector gồm:
+\begin{itemize}
+    \item \textbf{INIT}: Trạng thái khởi tạo hệ thống, cấu hình các ngoại vi và chuẩn bị cho việc thu thập dữ liệu.
+    \item \textbf{IDLE}: Trạng thái chờ lệnh từ máy tính.
+    \item \textbf{STARTED}: Trạng thái bắt đầu thu thập dữ liệu.
+    \item \textbf{SENDING}: Trạng thái gửi dữ liệu đã thu thập cho máy tính.
+    \item \textbf{DMA\_DONE}: Trạng thái hoàn thành thu thập dữ liệu bằng DMA.
+    \item \textbf{ABORTED}: Trạng thái hủy bỏ quá trình thu thập dữ liệu do lỗi.
+    \item \textbf{SAMPLES\_SENT}: Trạng thái hoàn thành việc gửi dữ liệu.
+\end{itemize}
+
+\section{Lưu đồ giải thuật chi tiết của HIL Collector}
+\subsection{Lưu đồ giải thuật của HIL Collector}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.15\textwidth]{image/LA_flow_chart.jpg}
+    \caption{Lưu đồ giải thuật của HIL Collector}
+    \label{fig:LA_flow_chart}
+\end{figure}
+
+HIL Collector hoạt động trong một vòng lặp vô hạn kết hợp với ngắt DMA nhằm tối ưu hóa tốc độ cho quá trình thu thập và truyền dữ liệu.
+Quá trình bắt đầu bằng việc khởi tạo các ngoại vi cần thiết như USB, UART, ADC, PIO và DMA. Sau khi khởi tạo hoàn tất, hệ thống chuyển sang trạng thái \texttt{IDLE} để chờ lệnh từ máy tính.
+
+Khi nhận được các lệnh từ máy tính, HIL Collector sẽ lưu cấu hình, gán cờ và gửi phản hồi về máy tính. Nếu nhận được lệnh 'F', HIL Collector sẽ chuyển sang trạng thái \texttt{STARTED} và thực hiện cấp phát bộ nhớ cho DMA.
+Sau đó nếu tính toán nếu thời gian chuyển đổi của ADC lớn hơn 96 cycles, HIL Collector sẽ tiếp tục cấu hình các ngoại vi khác, kích hoạt DMA và chuyển sang trạng thái \texttt{SENDING}.
+Ngược lại, Logic analzyer sẽ chuyển sang trạng thái \texttt{ABORTED} do thời gian chuyển đổi của ADC trên Raspberry Pi tối thiểu là 96 cycles, nếu lấy mẫu với tốc độ quá lớn sẽ dẫn đến các lỗi không mong muốn.
+
+Quá trình gửi và thu thập dữ liệu được thực hiện song song thông qua ngắt DMA (DMA Interrupt Handler). Khi DMA được kích hoạt, dữ liệu sẽ được ghi vào bộ đệm.
+HIL Collector sẽ kiểm tra tình trạng bộ đệm. Nếu không gửi kịp dữ liệu lên máy tính, bộ đệm sẽ bị tràn và hệ thống sẽ chuyển sang trạng thái \texttt{ABORTED}.
+Ngược lại, nếu thu thập đủ dữ liệu, HIL Collector sẽ chuyển sang trạng thái \texttt{DMA\_DONE}.
+
+Trong trạng thái \texttt{SENDING} / \texttt{DMA\_DONE}, HIL Collector sẽ kiểm tra buffer đã đầy một nửa hay chưa để thực hiện cơ chế truyền dữ liệu theo từng phần.
+Dữ liệu sau đó được gửi ra máy tính qua USB, với định dạng mỗi mẫu gồm 1 byte tín hiệu số và 1 byte tín hiệu tương tự. Quá trình này lặp lại cho đến khi toàn bộ số mẫu đã được truyền đi.
+Khi đã gửi đủ số mẫu, HIL Collector sẽ chuyển sang trạng thái \texttt{SAMPLES\_SENT} và tắt ADC, PIO, DMA, xóa bộ đệm để sẵn sàng cho chu kỳ thu thập tiếp theo.
+
+\subsection{Cơ chế xử lý bộ đệm DMA}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/LA_dma_buffer.jpg}
+    \caption{Cấp phát bộ đệm DMA}
+    \label{fig:LA_dma_buffer}
+\end{figure}
+Để đảm bảo HIL Collector có thể hoạt động với hiệu suất tối đa trong việc thu thập và truyền dữ liệu ở tốc độ cao, bộ đệm DMA tổng (DMA Buffer) được thiết kế theo một kiến trúc phân bổ đặc biệt.
+Quá trình cấp phát này được chia làm hai cấp độ phân tách nhằm giải quyết các bài toán về luồng dữ liệu phần cứng.
+
+Thứ nhất, bộ đệm được phân thành hai vùng độc lập cho tín hiệu số (Digital) và tín hiệu tương tự (Analog).
+Việc phân chia này dựa trên bản chất vật lý của các khối ngoại vi. Tín hiệu số được thu thập thông qua PIO (Programmable I/O), trong khi tín hiệu tương tự được lấy mẫu bởi ADC.
+Mỗi phần cứng này sử dụng các bộ điều khiển DMA riêng biệt, việc cung cấp mỗi loại tín hiệu một không gian bộ nhớ khác nhau giúp các kênh DMA có thể ghi dữ liệu trực tiếp vào RAM một cách tuyến tính.
+Thiết kế này sẽ loại bỏ sự phức tạp và độ trễ nếu phải sắp xếp xen kẽ dữ liệu Digital và Analog vào cùng mảng bộ nhớ, từ đó tối ưu hóa tốc độ cho HIL Collector.
+
+Thứ hai, mỗi phân vùng Digital và Analog lại được chia thành hai phần nhỏ hơn. Đây là một kỹ thuật phân bổ bộ đệm kép (Double Buffering) hay còn gọi là kỹ thuật Ping-Pong Buffer.
+Lợi ích của việc sử dụng kỹ thuật này được thể hiện rõ khi so sánh với bộ đệm đơn (Single Buffering) truyền thống. Với một vùng nhớ duy nhất, khi DMA ghi đầy bộ đệm, quá trình lấy mẫu bắt buộc phải tạm ngừng để chờ CPU đọc và truyền dữ liệu.
+Khoảng thời gian CPU xử lý dữ liệu này sẽ tạo ra thời gian chết. Hậu quả là tín hiệu trong thời gian chết bị bỏ sót, gây đứt gãy luồng dữ liệu và giới hạn tần số lấy mẫu của HIL Collector.
+Ngược lại, với kỹ thuật Ping-Pong Buffering, hệ thống sẽ duy trì được tính liên tục của dữ liệu. Trong quá trình vận hành, khi luồng dữ liệu đang được DMA ghi vào một nửa bộ đệm thứ nhất (Ping), trong khi đó CPU có thể truy cập vào một nửa bộ đệm thứ hai (Pong) để xử lý và truyền khối dữ liệu thu thập trước đó.
+Ngay thời điểm bộ đệm Ping đầy, DMA sẽ chuyển sang ghi vào bộ đệm Pong và quá trình được lặp lại liên tục. Việc cấp phát và phân chia bộ đệm này giúp triệt tiêu thời gian chết, tách biệt hoàn toàn tiến trình thu thập dữ liệu của phần cứng và xử lý của phần mềm, từ đó đảm bảo HIL Collector có thể lấy mẫu liên tục ở tần số cao mà không xảy ra hiện tượng mất dữ liệu.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/LA_dma_flow.jpg}
+    \caption{Luồng dữ liệu DMA đối với tín hiệu số}
+    \label{fig:LA_dma_flow}
+\end{figure}
+Để kiểm soát và đồng bộ hóa quá trình thu thập dữ liệu, hệ thống HIL Collector sử dụng hai biến là \texttt{dma\_halves} và \texttt{num\_halves} (được minh họa trong Hình \ref{fig:LA_dma_flow}). Cơ chế này được áp dụng đồng nhất cho cả tín hiệu số và tín hiệu tương tự. 
+Biến \texttt{dma\_halves} đại diện cho tiến trình của phần cứng, được tự động tăng thêm 1 mỗi khi ngắt DMA được kích hoạt. 
+Ngược lại, biến \texttt{num\_halves} đại diện cho tiến trình của phần mềm, được vi xử lý (CPU) tăng thêm 1 bên trong vòng lặp chính sau khi hoàn tất việc truyền toàn bộ dữ liệu của một nửa bộ đệm lên máy tính.
+
+Như được mô tả trong Hình \ref{fig:LA_dma_flow}, tại thời điểm khởi tạo, cả hai biến đều cùng trỏ về một vị trí ban đầu tại bộ đệm Digital\_0. 
+Khi DMA ghi đầy bộ đệm Digital\_0, một ngắt phần cứng sẽ được kích hoạt, làm biến \texttt{dma\_halves} nhảy lên trước 1 bước. 
+Sau đó phần cứng DMA tự động chuyển sang thu thập dữ liệu cho nửa bộ đệm còn lại, trong khi phần mềm (CPU) tiến hành đọc và gửi khối dữ liệu từ Digital\_0 lên máy tính. 
+Khi CPU hoàn tất việc truyền tải khối dữ liệu này, biến \texttt{num\_halves} sẽ được cộng thêm 1, bắt kịp vị trí hiện tại của biến \texttt{dma\_halves}. Tiến trình này sẽ diễn ra luân phiên liên tục cho đến khi toàn bộ số lượng mẫu yêu cầu được thu thập và truyền thành công.
+
+Tuy nhiên, hiện tượng tràn bộ đệm vẫn sẽ xảy ra khi có sự mất cân bằng giữa tốc độ lấy mẫu của phần cứng và tốc độ truyền của phần mềm. Do bộ đệm chỉ gồm 2 nửa nên nếu hiệu số giữa 2 biến lớn hơn 1, điều đó chứng minh rằng DMA đã hoạt động quá nhanh, điền đầy cả 2 nửa bộ đệm.
+Khi đó phần cứng sẽ ghi đè lên nửa bộ đệm mà CPU vẫn chưa kịp xử lý, dẫn đến dữ liệu trong bộ đệm không còn chính xác. Để giải quyết vấn đề này, HIL Collector sẽ chuyển sang trạng thái \texttt{ABORTED} và gửi thông báo lỗi về máy tính, đồng thời tắt ADC, PIO, DMA để ngăn chặn việc thu thập dữ liệu sai lệch.
+
+\subsection{Cơ chế xử lý dữ liệu}
+\label{subsec:la_process_data}
+Khi phần cứng chỉ có duy nhất một đường truyền vật lý để gửi lệnh điều khiển và dữ liệu thô, việc phân biệt giữa các loại dữ liệu trở nên rất quan trọng.
+Nhằm giải quyết bài toán này, HIL Collector sẽ sử dụng một mốc giá trị là 0x80 để phân loại dữ liệu. Cụ thể, bảng mã ASCII chuẩn chỉ sử dụng 7 bit để biểu diễn các ký tự thông dụng.
+Do đó, tất cả các ký tự dùng làm lệnh giao tiếp, phản hồi giữa phần cứng và phần mềm đều có giá trị từ 0x00 đến 0x7F, tức là luôn nhỏ hơn 0x80.
+
+Theo đó, toàn bộ dữ liệu do HIL Collector lấy mẫu trước khi được gửi đi sẽ được Raspberry Pi set bit MSB lên mức 1. Để tối ưu hóa tối đa băng thông truyền tải, HIL Collector chỉ gửi 1 byte cho mỗi mẫu tín hiệu số và 1 byte cho mỗi mẫu tín hiệu tương tự.
+Chính vì thế, đối với tín hiệu số, số kênh được lấy mẫu tối đa là 7 kênh. Đối với tín hiệu tương tự, độ phân giải ADC của Raspberry Pi là 8 bit nên giá trị mẫu sẽ nằm trong khoảng từ 0x00 đến 0xFF.
+Tuy nhiên bit MSB phải được set lên 1, do đó vi điều khiển cần dịch phải 1 bit, loại bỏ bit LSB và chỉ gửi 7 bit còn lại.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/LA_analog.jpg}
+    \caption{Khung dữ liệu gửi lên PC cho 1 mẫu Digital và Analog}
+    \label{fig:LA_analog}
+\end{figure}
+
+Để đánh giá hiệu quả của cơ chế xử lý dữ liệu này, cần xem xét đến các yếu tố về sai số khi giảm độ phân giải của ADC từ 8 bit xuống còn 7 bit, cũng như băng thông đường truyền sẽ ảnh hưởng như nào đối với tốc độ lấy mẫu tối đa của HIL Collector.
+
+Công thức tính bước nhảy mức điện áp: $V_{step} = \frac{V_{ref}}{2^n}$. Với $V_{ref} = 3.3V$, ADC 8 bit sẽ độ phần giải xấp xỉ 13mV, trong khi ADC 7 bit sẽ có độ phân giải xấp xỉ 26mV.
+Điều này có nghĩa trong trường hợp sử dụng ADC 7 bit, sẽ có sai số lượng tử hóa tăng gấp đôi.
+
+Trong trường hợp nếu dùng ADC 8 bit, mỗi mẫu của tín hiệu tương tự sẽ chiếm 2 byte, tổng số byte cần truyền cho mỗi mẫu là 3 byte (1 byte digital + 2 byte analog).
+Khi đó, băng thông USB sẽ bị chiếm 30\% cho 1 byte của tín hiệu tương tự nhưng trong đó chỉ có 1 bit thực sự mang thông tin.
+Bên cạnh đó, việc tăng số lượng byte cũng làm tăng thời gian truyền tải, điều này sẽ khiến tần số lấy mẫu của HIL Collector bị giảm để tránh hiện tượng tràn bộ đệm như đã đề cập ở phần trước.
+Ngoài ra việc xử lý dữ liệu trên máy tính cũng sẽ trở nên phức tạp hơn.
+
+Với mục tiêu chính là thu thập dữ liệu từ DUT để phân tích và hiển thị dạng sóng, việc giảm độ phân giải của ADC xuống còn 7 bit là một sự đánh đổi hợp lý để đảm bảo HIL Collector có thể hoạt động ở tần số lấy mẫu cao mà không bị mất dữ liệu, đồng thời vẫn cung cấp đủ thông tin để người dùng có thể phân tích tín hiệu một cách hiệu quả.

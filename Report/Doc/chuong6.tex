@@ -1,0 +1,101 @@
+\chapter{THIẾT KẾ VÀ THỰC HIỆN PHẦN MỀM NHÚNG CHO DUT}
+\section{Yêu cầu phần mềm DUT để tương thích hệ thống HIL}
+
+Trong hệ thống HIL, thiết bị DUT được xem như một hệ thống độc lập do người dùng phát triển. Vì vậy, hệ thống HIL không can thiệp vào kiến trúc nội bộ hay cách triển khai phần mềm nhúng trên DUT. Thay vào đó, hệ thống chỉ định nghĩa các yêu cầu giao tiếp nhằm đảm bảo DUT có thể tích hợp và kiểm thử tự động một cách nhất quán.
+
+Do đó, phần mềm trên DUT được khuyến nghị cần tuân thủ các quy định giao tiếp tối thiểu được mô tả dưới đây.
+
+\subsection{Mô hình giao tiếp}
+
+DUT nên hỗ trợ mô hình giao tiếp dạng yêu cầu – phản hồi (command–response model). Máy tính kiểm thử gửi lệnh điều khiển đến DUT và DUT phải trả về phản hồi tương ứng sau khi thực thi.
+
+Mỗi lệnh được xử lý độc lập và kết thúc bằng ký tự xuống dòng nhằm đảm bảo khả năng đồng bộ dữ liệu.
+
+\subsection{Giao diện truyền thông}
+
+DUT nên cung cấp ít nhất một kênh giao tiếp với máy tính hoặc hệ thống HIL nhằm phục vụ việc cấu hình, điều khiển và thu thập dữ liệu kiểm thử. 
+Kênh giao tiếp này có thể được hiện thực thông qua các chuẩn phổ biến như UART, USB, CAN hoặc Ethernet tùy theo đặc điểm phần cứng của DUT.
+
+\subsection{Định dạng lệnh}
+
+Định dạng lệnh được khuyến nghị sử dụng văn bản ASCII nhằm đơn giản hóa việc quan sát dữ liệu, debug và tích hợp với các công cụ kiểm thử tự động. Định dạng lệnh cơ bản có thể được mô tả như sau:
+
+\begin{verbatim} <command> <arg1> <arg2> ... \n
+\end{verbatim}
+
+Ví dụ:
+
+\begin{verbatim}
+pwm_set 50
+adc_read
+\end{verbatim}
+
+\subsection{Định dạng phản hồi}
+
+Sau khi xử lý lệnh, DUT nên gửi phản hồi theo một trong các dạng:
+
+\begin{itemize}
+\item OK — thực thi thành công
+\item ERROR — xảy ra lỗi
+\item Dữ liệu đo được hoặc trạng thái thiết bị
+\end{itemize}
+
+Việc chuẩn hóa phản hồi giúp hệ thống HIL có thể tự động phân tích kết quả kiểm thử.
+
+\subsection{Yêu cầu thời gian phản hồi}
+
+DUT nên phản hồi trong khoảng thời gian xác định để tránh lỗi timeout trong quá trình kiểm thử tự động. Thời gian phản hồi khuyến nghị nhỏ hơn 1 giây cho mỗi lệnh, tùy thuộc vào độ phức tạp của thao tác thực hiện.
+
+\section{Nguyên lý hoạt động của chương trình DUT mẫu}
+
+Để dễ dang tích hợp với hệ thống HIL, chương trình DUT mẫu được xây dựng nhằm minh họa nguyên lý tương tác giữa thiết bị DUT và hệ thống HIL. Mục tiêu của chương trình mẫu không phải là áp đặt kiến trúc phần mềm cụ thể, mà cung cấp một cơ chế tham khảo giúp người dùng dễ dàng tích hợp DUT với hệ thống kiểm thử.
+
+Dưới đây là một số nguyên lý hoạt động cơ bản của chương trình DUT mẫu:
+\begin{itemize}
+    \item Chương trình DUT mẫu sử dụng một task chuyên trách để xử lý các lệnh nhận được từ máy tính thông qua giao tiếp USB. Task này hoạt động theo cơ chế vòng lặp vô hạn, liên tục chờ dữ liệu và phản hồi sau khi xử lý.
+    \item Khi nhận được một lệnh, chương trình phân tích cú pháp để xác định loại lệnh và các tham số đi kèm. Dựa trên loại lệnh, chương trình thực hiện các thao tác tương ứng như cấu hình tham số giao tiếp hoặc kích hoạt mô phỏng thiết bị ngoại vi.
+    \item Chương trình DUT mẫu không thực hiện mô phỏng thiết bị ngoại vi mà chỉ đóng vai trò là đối tượng tiếp nhận và xử lý tín hiệu mô phỏng từ hệ thống HIL. Điều này giúp đánh giá tính đúng đắn và độ ổn định của firmware trên DUT khi tương tác với các tín hiệu mô phỏng.
+\item OK — thực thi thành công
+\item ERROR — xảy ra lỗi
+\item Dữ liệu đo được hoặc trạng thái thiết bị
+\end{itemize}
+
+Việc chuẩn hóa phản hồi giúp hệ thống HIL có thể tự động phân tích kết quả kiểm thử.
+
+\subsection{Yêu cầu thời gian phản hồi}
+
+DUT nên phản hồi trong khoảng thời gian xác định để tránh lỗi timeout trong quá trình kiểm thử tự động. Thời gian phản hồi khuyến nghị nhỏ hơn 1 giây cho mỗi lệnh, tùy thuộc vào độ phức tạp của thao tác thực hiện.
+
+\section{Nguyên lý hoạt động của chương trình DUT mẫu}
+
+Để dễ dang tích hợp với hệ thống HIL, chương trình DUT mẫu được xây dựng nhằm minh họa nguyên lý tương tác giữa thiết bị DUT và hệ thống HIL. Mục tiêu của chương trình mẫu không phải là áp đặt kiến trúc phần mềm cụ thể, mà cung cấp một cơ chế tham khảo giúp người dùng dễ dàng tích hợp DUT với hệ thống kiểm thử.
+
+Dưới đây là một số nguyên lý hoạt động cơ bản của chương trình DUT mẫu:
+\begin{itemize}
+    \item Chương trình DUT mẫu sử dụng một task chuyên trách để xử lý các lệnh nhận được từ máy tính thông qua giao tiếp USB. Task này hoạt động theo cơ chế vòng lặp vô hạn, liên tục chờ dữ liệu và phản hồi sau khi xử lý.
+    \item Khi nhận được một lệnh, chương trình phân tích cú pháp để xác định loại lệnh và các tham số đi kèm. Dựa trên loại lệnh, chương trình thực hiện các thao tác tương ứng như cấu hình tham số giao tiếp hoặc kích hoạt mô phỏng thiết bị ngoại vi.
+    \item Chương trình DUT mẫu không thực hiện mô phỏng thiết bị ngoại vi mà chỉ đóng vai trò là đối tượng tiếp nhận và xử lý tín hiệu mô phỏng từ hệ thống HIL. Điều này giúp đánh giá tính đúng đắn và độ ổn định của firmware trên DUT khi tương tác với các tín hiệu mô phỏng.
+\end{itemize}
+
+Lưu đồ giải thuật tổng quát mô tả trình tự hoạt động chính của hệ thống DUT mẫu được trình bày trong Hình \ref{fig:DUT_overview}.
+Lưu đồ giải thuật tổng quát mô tả trình tự hoạt động chính của hệ thống DUT mẫu được trình bày trong Hình \ref{fig:DUT_overview}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{image/HIL_overview.jpg}
+    \caption{Lưu đồ giải thuật tổng quát của hệ thống DUT mẫu}
+    \includegraphics[width=0.3\textwidth]{image/HIL_overview.jpg}
+    \caption{Lưu đồ giải thuật tổng quát của hệ thống DUT mẫu}
+    \label{fig:DUT_overview}
+\end{figure}
+
+Lưu đồ giải thuật chi tiết của task xử lý lệnh từ máy tính trên DUT được minh họa trong Hình \ref{fig:DUT_CLI_task}.
+Lưu đồ giải thuật chi tiết của task xử lý lệnh từ máy tính trên DUT được minh họa trong Hình \ref{fig:DUT_CLI_task}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/HIL_CLI_task.jpg}
+    \caption{Lưu đồ giải thuật của task xử lý lệnh từ máy tính}
+    \includegraphics[width=0.7\textwidth]{image/HIL_CLI_task.jpg}
+    \caption{Lưu đồ giải thuật của task xử lý lệnh từ máy tính}
+    \label{fig:DUT_CLI_task}
+\end{figure}

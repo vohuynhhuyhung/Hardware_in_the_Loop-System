@@ -1,0 +1,25 @@
+\chapter*{TÓM TẮT}
+
+Báo cáo trình bày việc thiết kế và xây dựng một hệ thống mô phỏng phần cứng trong vòng lặp nhằm phục vụ kiểm thử và đánh giá phần mềm nhúng cho thiết bị cần kiểm thử. Hệ thống cho phép mô phỏng các thiết bị ngoại vi và giao tiếp phổ biến, từ đó hỗ trợ kiểm thử chức năng, đánh giá hành vi và độ ổn định của firmware DUT trong môi trường gần với thực tế. Nội dung báo cáo bao gồm:
+
+\textbf{Phần cứng của hệ thống HIL và DUT:}
+\begin{itemize}
+    \item Thiết kế hệ thống HIL đóng vai trò mô phỏng các thiết bị ngoại vi và môi trường hoạt động của DUT, hỗ trợ các giao thức giao tiếp phổ biến.
+    \item Xây dựng bo DUT làm đối tượng kiểm thử, giao tiếp trực tiếp với HIL để nhận tín hiệu mô phỏng và phản hồi dữ liệu theo các kịch bản kiểm thử được thiết lập.
+    \item Hệ thống phần cứng cho phép mở rộng và cấu hình linh hoạt, phù hợp cho mục đích nghiên cứu và phát triển phần mềm nhúng.
+\end{itemize}
+
+\textbf{Firmware cho hệ thống HIL và DUT:}
+\begin{itemize}
+    \item Phát triển firmware cho cả HIL và DUT, cho phép triển khai đa nhiệm và quản lý các tác vụ giao tiếp một cách hiệu quả.
+    \item Cài đặt các tác vụ xử lý giao tiếp giữa HIL và DUT; tác vụ tiếp nhận và xử lý lệnh từ máy tính; tác vụ mô phỏng thiết bị ngoại vi trên HIL và tác vụ xử lý tín hiệu trên DUT.
+\end{itemize}
+
+\textbf{Phần mềm trên máy tính:}
+\begin{itemize}
+    \item Phát triển phần mềm trên máy tính, cho phép cấu hình tham số truyền thông, gửi lệnh điều khiển và giám sát dữ liệu phản hồi.
+    \item Tích hợp khối điều phối kiểm thử cho phép xây dựng và thực thi các kịch bản kiểm thử tự động, hỗ trợ ghi nhận, theo dõi và đánh giá kết quả kiểm thử của DUT sử dụng Robot Framework.
+\end{itemize}
+
+Thông qua việc thiết kế và triển khai hệ thống này, đề tài hướng đến việc xây dựng một phần cứng và bộ thư viện phần mềm để thực hiện mô phỏng phần cứng hoặc cung cấp các ngoại vi cần thiết.
+Từ đó người dùng có thể linh hoạt kết nối, sử dụng ngoại vi và bộ thư viện được cung cấp để thực hiện kiểm thử DUT.

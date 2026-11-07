@@ -1,0 +1,569 @@
+\chapter{LÝ THUYẾT}
+\section{Hệ thống mô phỏng phần cứng trong vòng lặp}
+Hardware-in-the-Loop (HIL) là một phương pháp kiểm thử hệ thống, trong đó một phần phần cứng thực của hệ thống nhúng – thường là thiết bị cần kiểm thử (Device Under Test – DUT) – được kết nối và vận hành trong một môi trường mô phỏng. Môi trường mô phỏng này có nhiệm vụ tái hiện hành vi của các thành phần bên ngoài hệ thống, bao gồm cảm biến, cơ cấu chấp hành, hoặc các thiết bị ngoại vi giao tiếp với DUT.
+
+Khác với các phương pháp mô phỏng thuần phần mềm, HIL cho phép kiểm thử trực tiếp firmware chạy trên phần cứng thực, trong khi các thành phần còn lại của hệ thống được thay thế bằng mô hình mô phỏng. Nhờ đó, HIL giúp đánh giá chính xác hơn hành vi của hệ thống nhúng trong các điều kiện vận hành gần với thực tế, đồng thời giảm phụ thuộc vào phần cứng hoàn chỉnh trong giai đoạn phát triển ban đầu.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/hil.png}
+    \caption{Hệ thống mô phỏng phần cứng trong vòng lặp}
+    \label{fig:hil}
+\end{figure}
+
+Nguyên lý hoạt động của hệ thống HIL dựa trên một vòng lặp khép kín giữa phần cứng thực và môi trường mô phỏng. Trong vòng lặp này, DUT thực thi firmware và trao đổi tín hiệu với hệ thống mô phỏng thông qua các giao diện phần cứng.
+
+Cụ thể, môi trường mô phỏng sẽ tạo ra các tín hiệu đầu vào hoặc dữ liệu giao tiếp như tín hiệu cảm biến, dữ liệu I2C, SPI, UART và gửi tới DUT. DUT xử lý các dữ liệu này theo thuật toán đã lập trình và tạo ra các tín hiệu đầu ra hoặc phản hồi. Các tín hiệu đầu ra của DUT sau đó được hệ thống HIL thu nhận, phân tích và sử dụng để cập nhật trạng thái của mô hình mô phỏng, từ đó tạo ra các tín hiệu đầu vào tiếp theo cho DUT.
+
+Quá trình trao đổi này diễn ra liên tục theo thời gian thực hoặc gần thời gian thực, tạo thành một vòng lặp tương tác giữa phần cứng và mô phỏng. Nhờ nguyên lý này, HIL cho phép kiểm thử các kịch bản phức tạp, các tình huống lỗi và các điều kiện biên mà việc kiểm thử trên hệ thống thực gặp nhiều khó khăn hoặc rủi ro.
+
+\section{Các giao thức giao tiếp ngoại vi trong khối HIL Generator}
+\subsection{Giao thức UART}
+UART (Universal Asynchronous Receiver Transmitter) là giao thức truyền thông nối tiếp không đồng bộ, sử dụng hai đường tín hiệu chính là TX (Transmit) và RX (Receive). Không giống như các giao thức đồng bộ, UART không sử dụng xung clock chung mà thay vào đó hai thiết bị phải thống nhất trước các tham số truyền thông như tốc độ truyền nhận (baud rate), số bit dữ liệu (Data Bits), bit kiểm tra chẵn lẻ (Parity Bit) và bit dừng (Stop Bit).
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{image/uart.png}
+%     \caption{Giao thức UART}
+%     \label{fig:uart}
+% \end{figure}
+
+Nguyên lý hoạt động của UART dựa trên việc truyền dữ liệu theo từng khung. Mỗi khung dữ liệu bao gồm một bit bắt đầu (Start Bit), các bit dữ liệu (Data), bit kiểm tra (Parity Bit) nếu có và bit kết thúc (Stop Bit). Thiết bị nhận sẽ sử dụng tốc độ truyền nhận đã cấu hình để lấy mẫu tín hiệu và khôi phục dữ liệu ban đầu.\\
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/uart_frame.jpg}
+    \caption{Khung dữ liệu UART}
+    \label{fig:uart_frame}
+\end{figure}
+
+Đường TX của UART thông thường là mức điện áp cao khi không truyền dữ liệu. Khi bắt đầu truyền dữ liệu, tín hiệu sẽ được kéo xuống mức thấp cho Start Bit, đóng vai trò báo hiệu bắt đầu khung dữ liệu.
+Sau Start Bit là các bit dữ liệu thông thường từ 5 đến 9 bit, phổ biến nhất là 8 bit và được truyền theo thứ tự LSB (Least Significant Bit) trước. Nếu có bit kiểm tra (Parity Bit), nó sẽ được thêm vào sau các bit dữ liệu để giúp phát hiện lỗi trong quá trình truyền.
+Cuối cùng, một hoặc nhiều bit dừng (Stop Bit) sẽ được gửi để báo hiệu kết thúc khung dữ liệu và cho phép thiết bị nhận chuẩn bị cho khung tiếp theo.
+
+\subsection{Giao thức I2C}
+I2C (Inter-Integrated Circuit) là giao thức truyền thông nối tiếp đồng bộ, sử dụng hai đường tín hiệu SDA (Serial Data) và SCL (Serial Clock). Bus I2C hoạt động theo cơ chế master–slave, trong đó thiết bị master tạo xung clock và điều khiển quá trình truyền thông, còn các thiết bị slave phản hồi dựa trên địa chỉ được gửi.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/i2c.png}
+    \caption{Giao thức I2C}
+    \label{fig:i2c}
+\end{figure}
+
+Quá trình truyền dữ liệu trên bus I2C bắt đầu bằng điều kiện START, sau đó master gửi địa chỉ của thiết bị slave kèm theo bit chỉ định hướng truyền (đọc hoặc ghi). Thiết bị có địa chỉ trùng khớp sẽ phản hồi bằng tín hiệu ACK, cho phép master tiếp tục truyền dữ liệu. Kết thúc phiên giao tiếp, master phát điều kiện STOP để giải phóng bus.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/i2c_data_frame.png}
+    \caption{Khung dữ liệu I2C}
+    \label{fig:i2c_data_frame}
+\end{figure}
+
+Một đặc điểm quan trọng của I2C là khả năng hỗ trợ nhiều thiết bị slave trên cùng một bus nhờ cơ chế địa chỉ. Mỗi slave được định danh bằng một địa chỉ riêng, do đó master có thể giao tiếp với nhiều thiết bị mà không cần thêm đường tín hiệu vật lý.
+
+Tuy nhiên, vi điều khiển được lựa chọn để thực hiện mô phỏng I2C có thể bị giới hạn về mặt phần cứng, chẳng hạn chỉ hỗ trợ tối đa một hoặc hai địa chỉ slave I2C thông qua ngoại vi phần cứng tích hợp. Trong khi đó, theo đặc tả giao thức I2C, số lượng thiết bị slave có thể tồn tại trên cùng một bus là lớn hơn nhiều, miễn là mỗi thiết bị có địa chỉ riêng biệt và không trùng lặp.
+
+Để khắc phục hạn chế về số lượng slave phần cứng, một giải pháp thường được nhắc đến là sử dụng kỹ thuật bit-banging, trong đó các tín hiệu SDA và SCL được điều khiển hoàn toàn bằng phần mềm thông qua các chân GPIO. Phương pháp này cho phép mô phỏng linh hoạt nhiều thiết bị I2C và không phụ thuộc vào ngoại vi I2C phần cứng của vi điều khiển.
+
+Tuy nhiên, việc sử dụng bit-banging tồn tại nhiều hạn chế. Do quá trình tạo xung clock và điều khiển dữ liệu được thực hiện bằng phần mềm, độ chính xác về thời gian phụ thuộc lớn vào tốc độ xử lý và khả năng đáp ứng ngắt của hệ thống. Điều này có thể dẫn đến sai lệch thời gian, đặc biệt khi hệ thống HIL phải đồng thời xử lý nhiều tác vụ mô phỏng khác. Ngoài ra, bit-banging làm tăng tải cho CPU, ảnh hưởng đến tính thời gian thực và độ ổn định của toàn bộ hệ thống mô phỏng.
+
+Mặt khác, trên một bus I2C, tại một thời điểm chỉ tồn tại một phiên giao tiếp duy nhất do master điều khiển. Các thiết bị slave chỉ phản hồi khi địa chỉ của chúng được gọi và hoàn toàn không chủ động chiếm quyền điều khiển bus. Do đó, trong mô hình HIL, việc mô phỏng nhiều thiết bị I2C có thể được thực hiện bằng cách quản lý logic xử lý địa chỉ ở mức phần mềm, thay vì cần nhiều ngoại vi I2C vật lý hoặc bit-banging phức tạp.
+
+Với cách tiếp cận này, hệ thống HIL chỉ cần giám sát địa chỉ được DUT gửi ra, từ đó kích hoạt mô hình thiết bị tương ứng để phản hồi dữ liệu. Phương pháp này vừa đảm bảo tuân thủ nguyên lý hoạt động của giao thức I2C, vừa giữ được độ chính xác về thời gian và hiệu năng của hệ thống, phù hợp hơn cho các ứng dụng mô phỏng HIL trong kiểm thử thiết bị nhúng.
+
+Trong hệ thống mô phỏng phần cứng trong vòng lặp này, I2C được dùng để mô phỏng EEPROM và RTC để hỗ trợ kiểm thử phần mềm của DUT.
+\subsection{Giao thức SPI}
+SPI (Serial Peripheral Interface) là giao thức truyền thông nối tiếp đồng bộ, hoạt động theo mô hình master–slave. Giao thức này sử dụng các đường tín hiệu chính bao gồm MOSI (Master Out Slave In), MISO (Master In Slave Out), SCK (Serial Clock) và CS (Chip Select). SPI cho phép truyền dữ liệu với tốc độ cao và có cấu trúc đơn giản, phù hợp với các thiết bị yêu cầu băng thông lớn.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{image/spi.png}
+    \caption{Giao thức SPI}
+    \label{fig:spi}
+\end{figure}
+
+Nguyên lý hoạt động của SPI dựa trên việc master kích hoạt tín hiệu CS của slave cần giao tiếp. Khi CS được kích hoạt, dữ liệu sẽ được truyền song công trên hai đường MOSI và MISO theo từng xung clock. Do không sử dụng cơ chế địa chỉ như I2C, mỗi thiết bị slave SPI thường cần một đường CS riêng để được lựa chọn.
+
+Trong hệ thống mô phỏng phần cứng trong vòng lặp này, SPI được dùng để mô phỏng Flash để hỗ trợ kiểm thử phần mềm của DUT.
+% \subsection{Giao thức USB}
+% USB (Universal Serial Bus) là giao thức truyền thông nối tiếp tốc độ cao, được thiết kế để kết nối và trao đổi dữ liệu giữa thiết bị chủ (host) và các thiết bị ngoại vi (device). USB hoạt động theo mô hình host–device, trong đó host quản lý quá trình kết nối, cấu hình và truyền dữ liệu.
+
+% Nguyên lý hoạt động của USB dựa trên các giai đoạn như phát hiện thiết bị, cấp địa chỉ, cấu hình và trao đổi dữ liệu thông qua các endpoint. Dữ liệu USB được truyền theo các gói tin với cấu trúc chặt chẽ, đảm bảo tính toàn vẹn và độ tin cậy trong quá trình giao tiếp.
+
+% Trong hệ thống mô phỏng phần cứng trong vòng lặp này, USB được sử dụng làm kênh giao tiếp giữa hệ thống mô phỏng và máy tính, hệ thống và DUT. Thông qua USB, dữ liệu mô phỏng, trạng thái DUT và kết quả kiểm thử có thể được truyền lên phần mềm giám sát, đồng thời cho phép người dùng điều khiển và cấu hình quá trình mô phỏng một cách thuận tiện.
+
+\subsection{Giao thức CAN (Controller Area Network)}
+CAN (Controller Area Network) là một giao thức truyền thông nối tiếp được phát triển cho phép các vi điều khiển và các thiết bị giao tiếp với nhau trong một mạng lưới mà không cần máy chủ trung tâm.
+CAN sử dụng mô hình truyền thông bus đa điểm (multi-master bus), trong đó tất cả các nút được kết nối vào cùng một đường truyền và đều cói quyền chủ động gửi dữ liệu khi bus rảnh.
+Nhờ cơ chế này nên hệ thống CAN có khả năng mở rộng cao và không phụ thuộc vào một thiết bị trung tâm, giúp tăng độ tin cậy và giảm nguy cơ lỗi hoàn toàn hệ thống.
+
+Ví dụ: Trong một hệ thống với 1 thiết bị trung tâm thì tất cả các thiết bị khác đều phải giao tiếp thông qua thiết bị trung tâm đó khiến việc xử lý dữ liệu sẽ rất lớn. Ngoài ra nếu thiết bị trung tâm gặp sự cố thì toàn bộ hệ thống sẽ bị ảnh hưởng.
+Trong khi đó, với CAN, mỗi thiết bị có thể giao tiếp trực tiếp với nhau mà không cần thông qua một thiết bị trung tâm nào cả, giúp giảm tải và tăng độ tin cậy cho hệ thống.
+
+Trong mạng CAN, tất cả các nút đều kết nối vào hai dây tín hiệu vi sai là CANH và CANL. Dữ liệu được truyền dưới dạng tín hiệu vi sai nhằm tăng khả năng chống nhiễu điện từ và đảm bảo độ tin cậy trong môi trường công nghiệp.
+Giao thức CAN sử dụng 2 mức logic để biểu diễn dữ liệu: Dominant (logic 0), có điện áp chênh lệch giữa CANH và CANL và Recessive (logic 1) với điện áp giữa 2 đường tín hiệu gần bằng nhau.
+Do mức Dominant có khả năng ghi đè mức Recessive, CAN có cơ chế phân xử (arbitration) cho phép nhiều nút có thể gửi dữ liệu đồng thời. Trong quá trình này, mỗi nút vừa truyền vừa đọc lại dữ liệu trên bus.
+Nếu một nút gửi bit Recessive nhưng đọc được bit Dominant, nó hiểu rằng có nút khác đang truyền với độ ưu tiên cao hơn và sẽ tự động dừng truyền. Nhờ đó, thông điệp có ID nhỏ hơn sẽ có mức ưu tiên cao hơn và tiếp tục truyền mà không xảy ra xung đột dữ liệu.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\textwidth]{image/can_logic.jpg}
+    \caption{Giao thức CAN với tín hiệu vi sai}
+    \label{fig:can_logic}
+\end{figure}
+
+Dữ liệu trên mạng CAN đưuọc truyền dưới dạng các khung (frame). Một khung dữ liệu bao gồm các trường chính như sau:
+\begin{itemize}
+    \item SOF (Start of Frame): bit bắt đầu khung.
+    \item Arbitration Field: chứa Identifier (11 bit hoặc 29 bit) và bit RTR.
+    \item Control Field: Chứa Bit mở rộng định danh IDE và độ dài dữ liệu DLC quy định độ dài dữ liệu cần truyền (từ 0 đến 8 byte).
+    \item Data Field: Chứa dữ liệu thực tế được truyền, có độ dài tối đa 8 byte.
+    \item CRC Field: Chứa mã kiểm tra lỗi CRC để đảm bảo tính toàn vẹn của dữ liệu.
+    \item ACK Field: Chứa bit ACK để xác nhận việc nhận dữ liệu thành công.
+    \item EOF (End of Frame): bit kết thúc khung.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/can_frame.jpg}
+    \caption{Cấu trúc khung dữ liệu trong giao thức CAN}
+    \label{fig:can_frame}
+\end{figure}
+
+\subsection{Ngoại vi analog ADC/DAC}
+ADC (Analog-to-Digital Converter) và DAC (Digital-to-Analog Converter) là các ngoại vi dùng để chuyển đổi giữa tín hiệu tương tự và tín hiệu số trong hệ thống nhúng. ADC chuyển đổi điện áp hoặc dòng điện tương tự thành giá trị số để vi điều khiển xử lý, trong khi DAC thực hiện quá trình ngược lại.
+
+Nguyên lý hoạt động của ADC dựa trên việc lấy mẫu tín hiệu analog theo chu kỳ và lượng hóa thành giá trị số với độ phân giải xác định. DAC tạo ra tín hiệu analog bằng cách chuyển đổi các giá trị số thành mức điện áp tương ứng.
+
+Trong hệ thống mô phỏng phần cứng trong vòng lặp này, ADC và DAC được sử dụng để mô phỏng các tín hiệu cảm biến và tín hiệu điều khiển analog. Việc mô phỏng này cho phép kiểm thử khả năng xử lý tín hiệu tương tự của DUT, đánh giá phản ứng của firmware trước các thay đổi liên tục của tín hiệu đầu vào và kiểm tra các thuật toán xử lý tín hiệu trong điều kiện gần với thực tế.
+\subsection{Timer và PWM}
+
+\textbf{Timer} là một ngoại vi phần cứng quan trọng trong vi điều khiển, được sử dụng để đếm xung clock nội bộ hoặc xung từ nguồn bên ngoài nhằm thực hiện các chức năng liên quan đến thời gian. Timer cho phép hệ thống tạo ra các khoảng trễ chính xác, đo thời gian, đếm sự kiện, tạo ngắt định kỳ và hỗ trợ nhiều chức năng điều khiển khác trong hệ thống nhúng.
+
+Nguyên lý hoạt động của timer dựa trên việc bộ đếm (counter) tăng hoặc giảm giá trị theo từng xung clock. Khi giá trị đếm đạt đến một ngưỡng xác định trước gọi là giá trị tự nạp lại (\texttt{Auto Reload Register – ARR}), timer sẽ tạo ra một sự kiện cập nhật (update event), có thể sinh ngắt hoặc kích hoạt các chức năng ngoại vi khác.
+
+Thông thường, tần số hoạt động của timer được xác định thông qua bộ chia tần số \textbf{Prescaler (PSC)} và giá trị ARR theo công thức:
+
+\begin{equation}
+f_{timer} = \frac{f_{clock}}{(PSC + 1)(ARR + 1)}
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+    \item $f_{clock}$ là tần số xung clock cấp cho timer.
+    \item $PSC$ là giá trị bộ chia tần số.
+    \item $ARR$ là giá trị tự nạp lại của bộ đếm.
+\end{itemize}
+
+Nhờ cơ chế này, timer có thể tạo ra các khoảng thời gian rất chính xác mà không cần CPU phải liên tục kiểm tra bằng phần mềm, giúp giảm tải xử lý và tăng tính thời gian thực của hệ thống.
+
+Trong hệ thống mô phỏng phần cứng trong vòng lặp, timer thường được sử dụng để tạo các chu kỳ mô phỏng định kỳ, quản lý timeout giao tiếp, đo thời gian phản hồi của DUT và đồng bộ các tác vụ trong RTOS.
+
+\textbf{PWM (Pulse Width Modulation)} là một kỹ thuật điều chế độ rộng xung, trong đó tín hiệu đầu ra là một chuỗi xung vuông có tần số cố định nhưng độ rộng xung mức cao thay đổi theo yêu cầu điều khiển. PWM thường được tạo ra bởi ngoại vi timer của vi điều khiển.
+
+Nguyên lý của PWM dựa trên việc so sánh giá trị bộ đếm timer với một thanh ghi so sánh gọi là \texttt{Capture/Compare Register (CCR)}. Khi giá trị đếm nhỏ hơn CCR, tín hiệu đầu ra ở mức cao; khi giá trị đếm lớn hơn hoặc bằng CCR, tín hiệu đầu ra chuyển sang mức thấp. Nhờ đó, độ rộng xung được điều chỉnh thông qua giá trị CCR.
+
+Chu kỳ công tác (\textbf{Duty Cycle}) của PWM được xác định theo công thức:
+
+\begin{equation}
+Duty\ Cycle = \frac{T_{on}}{T_{period}} \times 100\%
+\end{equation}
+
+hoặc tương đương:
+
+\begin{equation}
+Duty\ Cycle = \frac{CCR}{ARR + 1} \times 100\%
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+    \item $T_{on}$ là thời gian tín hiệu ở mức cao.
+    \item $T_{period}$ là chu kỳ toàn phần của tín hiệu PWM.
+    \item $CCR$ là giá trị thanh ghi so sánh.
+\end{itemize}
+
+Ví dụ, nếu Duty Cycle là 50\%, tín hiệu sẽ ở mức cao trong một nửa chu kỳ và mức thấp trong nửa chu kỳ còn lại. Nếu Duty Cycle tăng lên 80\%, thời gian mức cao sẽ dài hơn, làm tăng năng lượng trung bình cung cấp cho tải.
+
+PWM được sử dụng rộng rãi trong điều khiển tốc độ động cơ DC, điều chỉnh độ sáng LED, điều khiển servo, phát tín hiệu analog giả lập thông qua lọc RC và nhiều ứng dụng điều khiển công suất khác.
+
+Trong hệ thống mô phỏng phần cứng trong vòng lặp, PWM được sử dụng để mô phỏng các tín hiệu điều khiển từ DUT như điều khiển quạt, động cơ, tạo ra xung vuông. Việc mô phỏng này giúp kiểm thử khả năng xử lý tín hiệu điều khiển của DUT, đánh giá phản ứng của firmware trước các thay đổi về độ rộng xung và kiểm tra các thuật toán điều khiển trong điều kiện gần với thực tế.
+
+\section{Hệ điều hành thời gian thực (Real-time Operating System – RTOS)}
+\subsection{Giới thiệu về RTOS}
+Hệ điều hành thời gian thực (Real-time Operating System – RTOS) là hệ điều hành được thiết kế để xử lý các tác vụ đòi hỏi thời gian phản hồi chính xác và nhanh chóng, đặc biệt trong các ứng dụng như hệ thống nhúng. 
+Khác với các hệ điều hành thông dụng như Windows, macOS hay Linux, vốn ưu tiên hiệu suất tổng thể và tính đa dụng, RTOS tập trung đảm bảo các tác vụ được thực hiện đúng thời hạn hoặc trong khoảng thời gian giới hạn. 
+Với khả năng quản lý đa nhiệm hiệu quả, RTOS ưu tiên các tác vụ quan trọng thông qua cơ chế lập lịch, đồng thời giảm thiểu độ trễ để phản hồi nhanh các sự kiện hoặc ngắt. Hệ điều hành này thường nhẹ, sử dụng ít tài nguyên, phù hợp với các thiết bị có phần cứng hạn chế.
+
+% RTOS có thể được chia làm 2 loại dựa vào độ trễ:
+% \begin{itemize}[leftmargin=2.5cm]
+%     \item Thời gian thực cứng (hard real-time).
+%     \item Thời gian thực mềm (soft real-time).
+% \end{itemize}
+
+% Hard real-time là loại hệ điều hành yêu cầu các tác vụ phải được thực hiện chính xác trong khoảng thời gian quy định mà không có bất kỳ độ trễ nào. 
+% Vì việc không tuân thủ thời hạn (deadline) có thể dẫn đến những hậu quả nghiêm trọng cho hệ thống hoặc thậm chí gây nguy hiểm đến tính mạng con người. 
+% Ví dụ như hệ thống túi khí trên xe ô tô, nếu cảm biến va chạm phát hiện sự cố và kích hoạt túi khí trong khoảng thời gian cực ngắn, thường dưới 0,1 giây. 
+% Nếu hệ thống không đáp ứng được thời gian này, túi khí có thể không bung kịp, dẫn đến nguy cơ tai nạn nghiêm trọng cho người trên xe.
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{image/hard_real_time.jpg}
+%     \caption{Đồ thị thời gian của Hard real-time}
+%     \label{fig:hard_real_time}
+% \end{figure}
+
+% Soft real-time là loại hệ điều hành được thiết kế để xử lý các tác vụ với yêu cầu thời gian linh hoạt hơn so với Hard Real-Time, nơi độ trễ nhỏ có thể được chấp nhận mà không gây ra hậu quả nghiêm trọng. 
+% Trong Soft Real-Time, các tác vụ vẫn cần được hoàn thành trong khoảng thời gian mong muốn, nhưng nếu thỉnh thoảng vượt quá thời hạn một chút, hệ thống vẫn hoạt động bình thường và không dẫn đến thiệt hại lớn. 
+% Đặc điểm này khiến Soft Real-Time phù hợp cho các ứng dụng ưu tiên hiệu suất nhưng không đòi hỏi tính chính xác tuyệt đối về thời gian. Tuy nhiên cần lưu ý, thời gian đáp ứng càng trễ thì thiệt hại càng lớn. 
+% Ví dụ như hệ thống tưới tiêu tự động, hệ thống được lập trình tưới nước vào những khung giờ cố định trong ngày. Nếu hệ thống bắt đầu tưới trễ hơn vài phút so với lịch trình, điều này thường không gây hại nghiêm trọng, cây vẫn nhận được nước và tiếp tục sinh trưởng bình thường. 
+% Tuy nhiên, nếu thời gian trễ kéo dài quá lâu, ví dụ hàng giờ, cây trồng có thể bị thiếu nước, dẫn đến nguy cơ héo úa hoặc chết dần.
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{image/soft_real_time.jpg}
+%     \caption{Đồ thị thời gian của Soft real-time}
+%     \label{fig:soft_real_time}
+% \end{figure}
+
+\subsection{Thread (Task) trong RTOS}
+Trong hệ điều hành thời gian thực (RTOS), thread (hay còn gọi là task) là những tác vụ thực thi những nhiệm vụ riêng biệt. 
+Trong các hệ thống nhúng đơn giản, mô hình \textbf{Super Loop} thường được sử dụng để điều khiển toàn bộ chương trình. 
+Trong mô hình này, các tác vụ được thực hiện tuần tự theo một vòng lặp vô hạn, không có khái niệm ưu tiên hay xử lý đồng thời.
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.7\textwidth]{image/superloop.jpg}
+%     \caption{Task trong Super Loop}
+%     \label{fig:superloop}
+% \end{figure}
+
+Tuy nhiên, khi hệ thống phức tạp hơn, với nhiều task hơn, yêu cầu thời gian thực nghiêm ngặt hoặc xử lý những sự kiện bất đồng bộ thì \textbf{Super Loop} trở nên khó kiểm soát và thiếu hiệu quả. 
+Lúc này, việc chuyển sang sử dụng \textbf{RTOS} sẽ giúp hệ thống có thể quản lý nhiều task độc lập, hỗ trợ ưu tiên, đa luồng, và đáp ứng thời gian thực một cách chính xác và linh hoạt hơn.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/task_RTOS.jpg}
+    \caption{Task trong Super Loop}
+    \label{fig:task_RTOS}
+\end{figure}
+Mỗi thread là một chương tình nhỏ. Nó có điểm bắt đầu và sau đó thường sẽ là một vòng lặp vô hạn và sẽ không trả về bất kỳ giá trị nào hết.\\
+\begin{table}[H]
+\centering
+\caption{Ví dụ đoạn chương trình của 1 thread}
+\begin{tabular}{|p{13cm}|}
+\hline
+\begin{lstlisting}[language=C,
+                   basicstyle=\ttfamily\small,
+                   aboveskip=0pt,
+                   belowskip=0pt]
+void display_thread(void *pvParameters)
+{
+    while (1)
+    {
+        // Code
+    }
+}
+\end{lstlisting}
+\\ \hline
+\end{tabular}
+\label{tab:display_thread}
+\end{table}
+
+Mỗi thread có thể sở hữu riêng tài nguyên như bộ nhớ stack, trạng thái thực thi. 
+RTOS quản lý thread thông qua một bộ lập lịch \textbf{Scheduler}. 
+Khi bộ lập lịch cần chuyển đổi thực thi từ thread A sang thread B, nó sẽ thực hiện một quá trình gọi là \textbf{context switch}. 
+Trong quá trình này, toàn bộ trạng thái hiện thời của thread A bao gồm các giá trị trong thanh ghi sẽ được lưu vào stack riêng của thread A để đảm bảo rằng trạng thái này có thể được khôi phục chính xác sau này. 
+Sau đó, bộ lập lịch nạp các giá trị thanh ghi đã được lưu từ trước của thread B vào CPU, khôi phục lại chính xác ngữ cảnh của thread B tại thời điểm nó bị tạm dừng. 
+Đặc biệt, thanh ghi bộ đếm chương trình (PC) sẽ xác định vị trí tiếp theo trong mã nguồn mà thread B sẽ tiếp tục thực thi. 
+Nhờ vào cơ chế này, các thread trong hệ thống có thể được chuyển đổi qua lại một cách liền mạch và nhất quán, đảm bảo tính đồng thời và đáp ứng thời gian thực trong hệ điều hành. 
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.4\textwidth]{image/thread_overview.jpg}
+%     \caption{Tổng quan thread}
+%     \label{fig:thread_overview}
+% \end{figure}
+
+% \noindent
+% Trong quá trình thực thi, mỗi tác vụ sẽ có những trạng thái chính sau:
+
+% \begin{itemize}
+%     \item \textbf{Ready:} Tác vụ đã sẵn sàng để thực thi nhưng một tác vụ có mức độ ưu tiên bằng hoặc cao hơn đang chạy.
+    
+%     \item \textbf{Running:} Tác vụ đang được thực thi.
+    
+%     \item \textbf{Blocked:} Tác vụ đang chờ một số sự kiện:
+%     \begin{itemize}
+%         \item \textbf{Time:} Nếu một tác vụ gọi \texttt{vTaskDelay()} thì nó sẽ bị chặn cho đến khi hết thời gian delay.
+%         \item \textbf{Resource:} Các tác vụ cũng có thể chặn chờ queue và semaphore…
+%     \end{itemize}
+
+%     \item \textbf{Suspended:} Giống với Block, nhưng không chờ sự kiện. Các tác vụ sẽ chỉ được chạy hoặc ngưng trạng thái bị treo khi được gọi thông qua API \texttt{vTaskSuspend()} và \texttt{vTaskResume()} tương ứng.
+% \end{itemize}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.55\textwidth]{image/thread_state.jpg}
+%     \caption{Trạng thái của thread}
+%     \label{fig:thread_state}
+% \end{figure}
+
+\subsection{Bộ lập lịch (Scheduler)}
+Bộ lập lịch (\textbf{Scheduler}) là một thành phần quan trọng trong hệ điều hành thời gian thực hoặc các hệ điều hành khác, chịu trách nhiệm quyết định thứ tự và thời điểm các thread hoặc task được thực thi trên bộ xử lý. 
+Bộ lập lịch phân bổ tài nguyên CPU dựa trên các yếu tố như mức độ ưu tiên, thời hạn (deadline), hoặc thuật toán lập lịch. 
+Trong RTOS, scheduler đảm bảo các tác vụ thời gian thực, đặc biệt là Hard Real-Time, được xử lý đúng hạn bằng cách thực hiện \textbf{context switch}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/multi_task.jpg}
+    \caption{Thực tế hoạt động của Multi-Task trong RTOS}
+    \label{fig:multi_task}
+\end{figure}
+Nhờ có bộ lập lịch, chúng ta có thể kiểm soát việc thực thi các tác vụ một cách linh hoạt và hiệu quả. Bộ lập lịch đảm bảo rằng mỗi task được thực hiện đúng thời điểm, không bị bỏ sót, ngay cả khi hệ thống có nhiều tác vụ cùng lúc. Mặc dù trên vi điều khiển chỉ có một lõi xử lý, nhờ cơ chế chuyển đổi nhanh giữa các tác vụ, hệ thống có thể tạo ra cảm giác như các tác vụ đang chạy song song.
+
+Để thực hiện được điều này, RTOS sử dụng các thuật toán lập lịch nhằm xác định thứ tự và thời điểm mà mỗi task được phép truy cập CPU. Mỗi thuật toán sẽ có nguyên lý hoạt động, ưu điểm và hạn chế riêng, từ đó ảnh hưởng trực tiếp đến độ trễ, hiệu năng và tính đáp ứng thời gian thực của hệ thống. Một số thuật toán phổ biến có thể kể đến như \textbf{Round Robin}, \textbf{Preemptive Scheduling} và \textbf{Cooperative Scheduling}.
+
+% \textbf{Round Robin} là một thuật toán lập lịch đơn giản, trong đó mỗi thread được cấp CPU trong một khoảng thời gian thực thi giới hạn được gọi là \textbf{time slice}. Khi time slice hết, task hiện tại bị tạm dừng và đưa vào trạng thái \texttt{BLOCKED} và nhường CPU cho các thread khác ở trạng thái \texttt{READY} trong hàng đợi bắt đầu chạy. Thuật toán này sẽ cho các thread đều có cơ hội được thực thi và lặp lại theo vòng tròn.
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{image/round_robin.jpg}
+%     \caption{Thuật toán lập lịch Round Robin}
+%     \label{fig:round_robin}
+% \end{figure}
+
+% \textbf{Preemptive Scheduling} là thuật toán khá tương đồng với \textbf{Round Robin}, các thread sẽ được CPU chạy trong khoảng thời gian giới hạn. Tuy nhiên \textbf{Preemptive Scheduling} sẽ cho phép các thread có những mức độ ưu tiên khác nhau. Các thread có mức độ ưu tiên cao hơn trong trạng thái \texttt{READY} có thể chiếm quyền CPU của thread đang thực thi ngay lập tức và đưa thread đó vào trạng thái \texttt{BLOCKED}. Điều này cho phép hệ thống phản hồi một cách nhanh chóng khi có sự kiện quan trọng. Nếu các thread có cùng mức độ ưu tiên thì Scheduler sẽ dùng thuật toán Round Robin. Nhược điểm của thuật toán này là nếu các thread có mức ưu tiên cao hơn luôn được chạy thì các thread có mức ưu tiên thấp hơn có thể sẽ bị “đói” (starvation).
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{image/preemptive.jpg}
+%     \caption{Thuật toán lập lịch Preemptive Scheduling}
+%     \label{fig:preemptive}
+% \end{figure}
+
+% \textbf{Cooperative Scheduling} là thuật toán cho phép các thread được thực thi đến khi nó chủ động nhường CPU bằng cách gọi \texttt{yield()} hoặc \texttt{suspend()}.  Điều này sẽ giúp cho các thread không bị gián đoạn bởi các thread khác. Tuy nhiên các thread cần được quản lý tốt vì thuật toán này có thể cho phép một thread thực thi quá lâu dẫn đến các thread khác rơi vào tình trạng “đói”.
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{image/cooperative.jpg}
+%     \caption{Thuật toán lập lịch Cooperative Scheduling}
+%     \label{fig:cooperative}
+% \end{figure}
+
+% \subsection{Queue (hàng đợi)}
+% Queue (hàng đợi) trong hệ điều hành thời gian thực (RTOS) là một cơ chế dữ liệu được sử dụng để truyền thông giữa các thread hoặc task một cách an toàn và có tổ chức. Queue hoạt động theo nguyên tắc FIFO (First In, First Out), nghĩa là phần tử được thêm vào đầu tiên sẽ được xử lý đầu tiên. Trong RTOS, queue thường được dùng để truyền thông điệp, dữ liệu hoặc tín hiệu giữa các task, chẳng hạn như gửi thông tin từ một task đọc cảm biến đến task điều khiển trong hệ thống nhúng. Cơ chế này giúp đồng bộ hóa và tránh xung đột tài nguyên, với các thao tác như \texttt{enqueue} (thêm phần tử) và \texttt{dequeue} (lấy phần tử) được quản lý bởi RTOS để đảm bảo tính chính xác và thời gian thực
+% \begin{figure}[H]
+%     \centering
+%     \begin{minipage}{0.48\textwidth}
+%         \centering
+%         \captionsetup{width=6cm, justification=centering}
+%         \includegraphics[width=\textwidth]{image/enqueue.jpg}
+%         \vspace{1pt}
+%         \caption{Thêm phần tử vào queue (enqueue)}
+%         \label{fig:enqueue}
+%     \end{minipage}
+%     \hfill
+%     \begin{minipage}{0.48\textwidth}
+%         \vspace{-8pt}
+%         \centering
+%         \captionsetup{width=6cm, justification=centering}
+%         \includegraphics[width=\textwidth]{image/dequeue.jpg}
+%         \caption{Lấy phần tử từ queue (dequeue)}
+%         \label{fig:dequeue}
+%     \end{minipage}
+% \end{figure}
+\subsection{Semaphore}
+\textbf{Semaphore} trong hệ điều hành thời gian thực (RTOS) là một cơ chế đồng bộ hóa dùng để kiểm soát truy cập vào các tài nguyên chung hoặc quản lý giao tiếp giữa các thread. Semaphore có thể là \textbf{binary semaphore} chỉ có hai trạng thái 0 hoặc 1 tương tự như khóa hoặc \textbf{counting semaphore} cho phép quản lý nhiều tài nguyên với giá trị đếm lớn hơn. Ví dụ nếu có 1 tài nguyên như buffer và có 3 task có thể truy cập vào buffer đó, counting semaphore lúc này được khởi tạo giá trị là 2 thì semaphore sẽ như 2 chiếc “chìa khóa”, thread nào lấy được sẽ được phép truy cập
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/couting_sem.jpg}
+    \caption{Couting Semaphore}
+    \label{fig:couting_sem}
+\end{figure}
+% \textbf{Mutex} hoạt động tương tự \textbf{binary semaphore}, là một cơ chế đồng bộ dùng để bảo vệ vùng tài nguyên dùng chung, đảm bảo rằng chỉ một thread được phép truy cập tài nguyên đó tại một thời điểm. 
+% Tuy nhiên \textbf{binary semaphore} không có tính sở hữu tức bất kì thread nào cũng đều có thể give (giải phóng) semphore. Đối với mutex, chỉ có một thread được sở hữu tại một thời điểm và chỉ có thread đó mới có thể giải phóng được mutex. 
+% Đồng thời mutex có tính \textbf{priority inheritance}, tức là nếu thread có mức ưu tiên thấp giữ mutex và thread có mức ưu tiên cao đang chờ thì RTOS sẽ tạm thời nâng mức ưu tiên của thread thấp lên bằng thread cao. 
+% Điều này giúp tránh hiện tượng \textbf{priority inheritance}, khi thread cao đang đợi semaphore của thread thấp mà có một thread có mức ưu tiên trung bình \texttt{READY} dẫn đến thread thấp không giải phóng được semaphore.
+
+Việc sử dụng semaphore đôi khi có thể dẫn đến tình trạng nhiều thread chờ đợi vô thời hạn để nhận được một semaphore. Tuy nhiên semaphore đó lại chỉ có thể được giải phóng bởi chính một trong các thread bị chặn. Điều này tạo ra một vòng lặp phụ thuộc lẫn nhau khiến tất cả các thread đều bị treo và không thể tiếp tục thực thi, tình trạng này được gọi là deadlock. %Điều này tương tự với mutex.
+
+Ví dụ:
+\begin{itemize}
+    \item \texttt{thread\_1} giữ semaphore A và đợi semaphore B.
+    \item \texttt{thread\_2} giữ semaphore B và đợi semaphore A.
+\end{itemize}
+
+\section{Cơ sở lý thuyết về phân tích phổ tần số}
+\subsection{Discrete-Time Fourier Transform - DTFT}
+Trong xử lý tín hiệu số, việc chuyển đổi dữ liệu từ miền thời gian sang miền tần số là bước then chốt để phân tích đặc tính phổ của tín hiệu.
+Phép biến đổi Fourier là công cụ nền tảng cho phép phân tách một tín hiệu liên tục phức tạp thành tổng các thành phần hàm sin và cos.
+Từ đó xác định biên độ và pha của từng tần số cấu thành.
+
+Công thức xác định cặp biến đổi Fourier liên tục được định nghĩa như sau:
+\begin{equation}
+X(\omega) = \int_{-\infty}^{\infty} x(t) e^{-j \omega t} dt
+\end{equation}
+
+Tuy nhiên trong các hệ thống, tín hiệu không tồn tại dưới dạng liên tục mà được thu thập dưới dạng các mẫu rời rạc $x[n]$. Khi đó, phép biến đổi Fourier thời gian rời rạc - Discrete-Time Fourier Transform (DTFT) được sử dụng để phân tích phổ của các chuỗi mẫu này.
+DTFT chuyển đổi chuỗi thời gian rời rạc thành một phổ tần số liên tục và có tính chất đặc trưng là tuần hoàn với chu kỳ $2\pi$. Công thức toán học của DTFT được mô tả qua biểu thức:
+\begin{equation}
+X(\omega_0) = \sum_{n=-\infty}^{\infty} x[n] e^{-j\omega_0 n}
+\end{equation}
+Với $\omega_0$ là tần số góc chuẩn hóa, dựa trên tần số góc và chu kì lấy mẫu $T_s$.
+$$\omega_0 = \omega \times T_s = \dfrac{2\pi f}{f_s}$$
+
+\subsection{Hiện tượng rò rỉ phổ và Kỹ thuật Cửa sổ (Windowing)}
+
+Như đã trình bày ở phần DTFT, công thức tính toán yêu cầu tín hiệu $x(n)$ phải có độ dài vô hạn (từ $-\infty$ đến $+\infty$). Tuy nhiên, trong hệ thống thực tế chỉ có thể thu thập được một lượng mẫu hữu hạn $L$. 
+
+Về mặt toán học, thao tác trích xuất một đoạn dữ liệu độ dài $L$ từ chuỗi vô hạn được coi là quá trình nhân tín hiệu gốc $x(n)$ với một hàm cửa sổ thời gian (time-windowing) $w(n)$. Tín hiệu sau khi đi qua cửa sổ, ký hiệu là $x_L(n)$, được biểu diễn như sau:
+\begin{equation}
+x_L(n) = x(n) \cdot w(n)
+\end{equation}
+
+Nếu hệ thống đơn thuần cắt lấy $L$ mẫu một cách tự nhiên mà không qua xử lý gì thêm, bản chất hệ thống đang áp dụng một \textbf{cửa sổ chữ nhật (Rectangular Window)}. Hàm cửa sổ này giữ nguyên tín hiệu bên trong vùng lấy mẫu và ép tất cả các giá trị bên ngoài về 0:
+\begin{equation}
+w(n) = 
+\begin{cases} 
+1, & \text{nếu } 0 \le n \le L-1 \\ 
+0, & \text{trường hợp khác} 
+\end{cases}
+\end{equation}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/rect_window.jpg}
+    \caption{Cửa sổ chữ nhật trong miền thời gian}
+    \label{fig:rect_window}
+\end{figure}
+
+Thực hiện phép biến đổi Fourier cho cửa sổ chữ nhật, phổ của cửa sổ này trong miền tần số mang hình dạng đặc trưng của hàm Sinc.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/rect_spectrum.jpg}
+    \caption{Phổ biên độ của cửa sổ chữ nhật}
+    \label{fig:rect_spectrum}
+\end{figure}
+Búp chính là búp có biên độ cao nhất nằm ngay trung tâm. Ký hiệu $\Delta\omega_w$ biểu thị bề rộng hiệu dụng của búp chính.
+Bề rộng này là thành phần quan trọng quyết định độ phân giải tần số. Búp chính càng hẹp thì khả năng tách biệt hai tần số nằm sát nhau càng tốt.
+Bên cạnh đó, các gợn sóng nhỏ trải dài hai bên búp chính là các búp phụ. Có thể thấy, thay vì năng lượng tập trung toàn bộ ở búp chính thì năng lượng bị tràn ra các búp phụ này.
+Điều này dẫn đến hiện tượng rò rỉ tần số (frequency leakage).
+
+Để giảm thiểu hiện tượng này, các hàm cửa sổ phi chữ nhật (non-rectangular windows) được áp dụng để tránh việc cắt đột ngột của cửa sổ chữ nhật.
+Một trong những loại cửa sổ được ứng dụng rộng rãi nhất là \textbf{Cửa sổ Hamming}, được định nghĩa bởi phương trình:
+\begin{equation}
+w(n) = 
+\begin{cases} 
+0.54 - 0.46 \cos\left(\dfrac{2\pi n}{L-1}\right), & \text{nếu } 0 \le n \le L-1 \\ 
+0, & \text{trường hợp khác} 
+\end{cases}
+\end{equation}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/hamming_window.jpg}
+    \caption{Cửa sổ Hamming trong miền thời gian và miền tần số}
+    \label{fig:hamming_window}
+\end{figure}
+Hình \ref{fig:hamming_window} so sánh cửa sổ chữ nhật với cửa sổ Hamming trong mieefnf thời gian và miền tần số.
+Trong miền thời gian, cửa sổ Hamming sẽ không cắt đột ngột như cửa sổ chữ nhật mà giảm dần về phía hai đầu.
+Còn trong miền tần số, có thể thấy các biên độ của các búp phụ rất bé hơn rất nhiều so với búp chính.
+Điều này giúp giảm thiểu hiện tượng rò rỉ tần số. Mặc dù độ rộng của búp chính của cửa sổ Hamming rộng hơn so với cửa sổ chữ nhật và biên độ cũng nhỏ hơn nhưng có thể khắc phục bằng cách lấy nhiều mẫu hơn.
+
+\subsection{Discrete Fourier Transform - DFT}
+Mặc dù DTFT cung cấp cái nhìn chi tiết về phổ tần số nhưng do công thức yêu cầu một tổng vô hạn các mẫu dữ liệu, việc triển khai trực tiếp trên hệ thống là không khả thi.
+Khi đó phép biến đổi Fourier rời rạc - Discrete Fourier Transform (DFT) sẽ giải quyết vấn đề này.
+DFT sẽ thực hiện lấy mẫu phổ liên tục của DTFT và giới hạn tính toán trong một khoảng tín hiệu có chiều dài hữu hạn N mẫu với các điểm cách nhau cách đều nhau trên toàn bộ khoảng Nyquist, $0 \le \omega \le 2\pi$.
+Các “tần số DFT” này được định nghĩa bằng radian trên mỗi mẫu như sau:
+\begin{equation}
+\omega_k = \dfrac{2 \pi k}{N}, \quad k = 0, 1, \dots, N-1
+\end{equation}
+hay với đơn vị Hz:
+\begin{equation}
+f_k = \dfrac{kf_s}{N}, \quad k = 0, 1, \dots, N-1
+\end{equation}
+Từ đó, phép biến đổi Fourier rời rạc N điểm sẽ là:
+\begin{equation}
+X(k) = \sum_{n=0}^{N-1} x(n) e^{-j\frac{2\pi}{N}kn}, \quad k = 0, 1, \dots, N-1
+\end{equation}
+Hoặc có thể viết:
+\begin{equation}
+X(k) = \sum_{n=0}^{N-1} x(n) W_N^{kn}, \quad k = 0, 1, \dots, N-1
+\end{equation}
+Trong đó, $W_N = e^{-j\frac{2\pi}{N}}$ được gọi là hệ số xoay (twiddle factor).\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/dtft_dft.png}
+    \caption{Mối quan hệ giữa DTFT và DFT}
+    \vspace{-1em}
+    \caption*{\textit{Nguồn: \href{https://www.mmjal.com/BLOG/?bmode=view&idx=170653753}{MALMIJAL}}}
+    \label{fig:dtft_dft}
+\end{figure}
+Hình \ref{fig:dtft_dft} thể hiện mối quan hệ giữa DTFT và DFT. Đường màu cam biểu diễn cho DTFT là một phổ tần số liên tục.
+Còn các điểm màu xanh đại diện cho kết quả của phép biến đổi DFT. Có thể thấy DFT thực chất chính là thao tác lấy mẫu đường cong phổ liên tục của DTFT.
+
+\subsection{Fast Fourier Transform - FFT}
+Việc tính tóa DFT đòi hỏi độ phức tạp cao với nhiều phép tính. Khi N lớn sẽ gây quá trình quá tải tính toán.
+Để tối ưu hóa tốc độ, phép biến đổi Fourier nhanh - Fast Fourier Transform (FFT) được triển khai giúp giảm độ phức tạp của thuật toán DFT.
+Thuật toán FFT dựa trên việc chia nhỏ phép tính DFT có độ dài N thành các phép tính DFT có độ dài ngắn hơn (N/2) bằng cách chia dải chỉ số $k$ từ $[0, N-1]$ thành hai khoảng $\left[ 0, \dfrac{N}{2}-1 \right]$ và $\left[k+\dfrac{N}{2}\right]$.
+
+\textbf{Ở nửa đầu}, $X(k)$ được tính như sau:
+\begin{equation}
+X(k) = \sum_{n=0}^{N/2-1} x(2n) W_N^{2kn} + \sum_{n=0}^{N/2-1} x(2n+1) W_N^{(2n+1)k}
+\end{equation}
+Ta có mối quan hệ giữa hệ số góc quay giữa $W_N^2$ và $W_{N/2}$ như sau:
+$$W_{N/2} = e^{-j\frac{2\pi}{N/2}} = (e^{-j\frac{2\pi}{N}})^2 = W_N^2$$
+Từ đó, ta có thể viết:
+\begin{equation}
+\begin{aligned}
+X(k) &= \sum_{n=0}^{N/2-1} x(2n) W_{N/2}^{kn} + W_N^k \sum_{n=0}^{N/2-1} x(2n+1) W_{N/2}^{kn} \\
+     &= G(k) + W_N^k H(k)
+\end{aligned}
+\label{eq:fft_xk}
+\end{equation}
+với $k = 0, 1, \dots, \dfrac{N}{2}-1$
+
+\textbf{Ở nửa sau}, $X(k + N/2)$ được tính như sau:
+\begin{equation}
+X(k + N/2) = G(k + N/2) + W_N^{k + N/2} H(k + N/2)
+\end{equation}
+
+Sử dụng tính chất tuần hoàn rằng bất kỳ DFT nào cũng tuần hoàn theo k với chu kỳ bằng độ dài của nó, ta có $G(k + N/2) = G(k)$ và $H(k + N/2)= H(k)$. Ta cũng có tính chất hệ số xoay:
+$$W_N^{N/2} = e^{-j\frac{2\pi}{N} \cdot \frac{N}{2}} = e^{-j\pi} = -1$$
+Từ đó, ta có:
+\begin{equation}
+X(k + N/2) = G(k) - W_N^k H(k)
+\label{eq:fft_xkn/2}
+\end{equation}
+
+Từ \eqref{eq:fft_xk} và \eqref{eq:fft_xkn/2}, toàn bộ phép DFT có thể được tính chỉ với $k = 0, 1, \dots, \dfrac{N}{2}-1$.
+\begin{equation}
+\begin{aligned}
+X(k) &= G(k) + W_N^k H(k)\\
+X(k + N/2) &= G(k) - W_N^k H(k)
+\end{aligned}
+\end{equation}
+Công thức này còn được biết đến với tên gọi là phương trình hợp nhất hình bướm \textit{(butterfly merging equations)}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/fft_butterfly.png}
+    \caption{FFT - 8 điểm}
+    \label{fig:fft_butterfly}
+\end{figure}
+
+\subsection{Mật độ phổ năng lượng}
+
+Trong phân tích tín hiệu số, phép biến đổi DFT/FFT cung cấp thông tin về biên độ và pha của các thành phần tần số dưới dạng số phức $X(k) = a + jb$. Trong nhiều ứng dụng thực tế, sự phân bố năng lượng hoặc công suất của tín hiệu theo tần số lại là yếu tố được quan tâm hàng đầu. Khi đó, khái niệm mật độ phổ năng lượng được sử dụng.
+
+Cơ sở toán học của mật độ phổ năng lượng được xây dựng dựa trên \textbf{Định lý Parseval}. Định lý này phát biểu rằng tổng năng lượng của một tín hiệu trong miền thời gian hoàn toàn bằng với tổng năng lượng của nó trong miền tần số. Đối với một chuỗi tín hiệu rời rạc $x(n)$ có chiều dài $N$ và phổ DFT tương ứng là $X(k)$, định lý Parseval được biểu diễn dưới dạng:
+\begin{equation}
+\sum_{n=0}^{N-1} x(n)^2 = \frac{1}{N} \sum_{k=0}^{N-1} |X(k)|^2
+\end{equation}
+
+Phương trình trên cho thấy đại lượng $|X(k)|^2$ là năng lượng mà tần số $k$ đóng góp vào tổng năng lượng của toàn bộ tín hiệu. Do đó, mật độ phổ năng lượng tại một dải tần số thứ $k$ được định nghĩa là bình phương độ lớn (mô-đun) của giá trị phức tại tần số đó:
+\begin{equation}
+E(k) = |X(k)|^2
+\end{equation}
+
+Dựa trên cơ sở lý thuyết về mật độ phổ năng lượng, ta có thể phân tích các dạng sóng khác nhau trong miền thời gian.
+Hình sau minh họa mối quan hệ giữa miền thời gian và miền tần số của sóng sin và sóng tam giác.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/waveform.png}
+    \caption{Sóng sin và sóng tam giác trong miền thời gian và miền tần số}
+    \label{fig:waveform}
+\end{figure}
+\textbf{Sóng tam giác} được tổng hợp từ tần số cơ bản $f$ và các hài bậc lẻ ($3f, 5f, \dots$), các hài bậc chẵn bằng 0. Biên độ của các hài bậc lẻ tuân theo công thức $a_n = \dfrac{4A}{(n\pi)^2}$.
+
+\textbf{Sóng sin / cosin} chỉ có một vạch biên độ duy nhất tại tần số cơ bản $f$, toàn bộ năng lượng của tín hiệu được tập trung tại một vạch phổ này.

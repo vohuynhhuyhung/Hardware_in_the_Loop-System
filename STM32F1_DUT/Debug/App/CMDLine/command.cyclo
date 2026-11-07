@@ -1,0 +1,14 @@
+../App/CMDLine/command.c:73:6:CommandLine_Task	1
+../App/CMDLine/command.c:82:6:CommandLine_Init	1
+../App/CMDLine/command.c:94:13:CommandLine_Task_Update	3
+../App/CMDLine/command.c:107:6:process_command	26
+../App/CMDLine/command.c:238:5:Cmd_help	5
+../App/CMDLine/command.c:262:5:Cmd_Clear_CLI	2
+../App/CMDLine/command.c:268:5:Cmd_ReadID_W25Q	2
+../App/CMDLine/command.c:278:5:Cmd_Write_W25Q	6
+../App/CMDLine/command.c:308:5:Cmd_Read_W25Q	7
+../App/CMDLine/command.c:344:5:Cmd_EraseChip_W25Q	2
+../App/CMDLine/command.c:362:5:Cmd_EEPROM_Init	3
+../App/CMDLine/command.c:391:5:Cmd_EEPROM_Write	6
+../App/CMDLine/command.c:418:5:Cmd_EEPROM_Read	7
+../App/CMDLine/command.c:453:5:Cmd_EEPROM_Fill	3

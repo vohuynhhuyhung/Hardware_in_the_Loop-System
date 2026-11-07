@@ -1,0 +1,2 @@
+../App/CMDLine/Commands/spi_cmd.c:13:12:Cmd_Prepare_W25Q	5
+../App/CMDLine/Commands/spi_cmd.c:32:6:Cmd_SPI_Register	1

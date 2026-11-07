@@ -1,0 +1,16 @@
+../App/EmuDrivers/Src/i2c_rtc.c:17:16:bcd2bin	1
+../App/EmuDrivers/Src/i2c_rtc.c:22:16:bin2bcd	1
+../App/EmuDrivers/Src/i2c_rtc.c:27:13:is_leap_year	1
+../App/EmuDrivers/Src/i2c_rtc.c:32:16:days_in_month	3
+../App/EmuDrivers/Src/i2c_rtc.c:45:8:rtc_init	1
+../App/EmuDrivers/Src/i2c_rtc.c:69:6:rtc_deinit	1
+../App/EmuDrivers/Src/i2c_rtc.c:75:8:find_rtc	3
+../App/EmuDrivers/Src/i2c_rtc.c:82:6:rtc_set_time	1
+../App/EmuDrivers/Src/i2c_rtc.c:89:6:rtc_set_date	1
+../App/EmuDrivers/Src/i2c_rtc.c:97:6:rtc_get_time	1
+../App/EmuDrivers/Src/i2c_rtc.c:104:6:rtc_get_date	1
+../App/EmuDrivers/Src/i2c_rtc.c:112:6:rtc_tick	9
+../App/EmuDrivers/Src/i2c_rtc.c:169:6:rtc_addr_handler	2
+../App/EmuDrivers/Src/i2c_rtc.c:193:6:rtc_rx_handler	2
+../App/EmuDrivers/Src/i2c_rtc.c:215:6:rtc_tx_handler	1
+../App/EmuDrivers/Src/i2c_rtc.c:228:6:rtc_listen_handler	1

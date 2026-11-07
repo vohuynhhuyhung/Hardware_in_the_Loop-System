@@ -1,0 +1,146 @@
+\chapter{GIỚI THIỆU ĐỀ TÀI}
+\section{Tổng quan về đề tài}
+Trong quá trình phát triển hệ thống nhúng, việc kiểm thử và xác minh chức năng của phần mềm và phần cứng là một yêu cầu bắt buộc nhằm đảm bảo tính đúng đắn và độ tin cậy của hệ thống. Tuy nhiên, ở các giai đoạn đầu của quá trình phát triển, phần cứng thực tế thường chưa hoàn thiện hoặc chưa sẵn sàng để triển khai kiểm thử toàn diện. Việc phụ thuộc quá nhiều vào phần cứng trong giai đoạn này không chỉ làm chậm tiến độ phát triển mà còn làm tăng chi phí và hạn chế khả năng lặp lại các kịch bản kiểm thử.
+
+Bên cạnh đó, các hệ thống nhúng hiện đại ngày càng trở nên phức tạp với sự tích hợp của nhiều ngoại vi và giao tiếp khác nhau. Việc kiểm thử trực tiếp các chức năng liên quan đến những ngoại vi này trên phần cứng thực tế gặp nhiều khó khăn, đặc biệt đối với các kịch bản lỗi hiếm gặp, các điều kiện biên hoặc các tình huống không an toàn. Trong nhiều trường hợp, việc tái hiện chính xác các điều kiện vận hành này trên hệ thống thực là không khả thi hoặc tiềm ẩn rủi ro cho thiết bị.
+
+Xuất phát từ những hạn chế trên, các phương pháp kiểm thử dựa trên mô phỏng đã được nghiên cứu và phát triển nhằm hỗ trợ quá trình thiết kế và triển khai hệ thống nhúng. Trong đó, phương pháp mô phỏng phần cứng trong vòng lặp - HIL (Hardware in the Loop), được xem là một giải pháp hiệu quả, cho phép kết hợp giữa phần cứng thực và môi trường mô phỏng trong cùng một hệ thống kiểm thử.
+
+Hệ thống HIL hoạt động bằng cách kết nối trực tiếp phần cứng thực của hệ thống nhúng, thường được gọi là thiết bị cần kiểm thử, với một môi trường mô phỏng có nhiệm vụ tái hiện hành vi của các thành phần bên ngoài DUT. Môi trường mô phỏng này có thể tạo ra các tín hiệu đầu vào, xử lý phản hồi đầu ra và giao tiếp với DUT thông qua các giao diện phần cứng, từ đó tạo nên một vòng lặp khép kín giữa phần cứng và mô hình mô phỏng.
+
+Thông qua HIL, các chức năng của hệ thống nhúng có thể được kiểm thử một cách toàn diện trong điều kiện gần với thực tế mà không cần triển khai đầy đủ hệ thống vật lý. Phương pháp này cho phép phát hiện sớm các lỗi về logic, lỗi giao tiếp và các sai lệch trong thiết kế, đồng thời hỗ trợ đánh giá hiệu năng và độ ổn định của hệ thống. Nhờ đó, quá trình phát triển hệ thống nhúng được tối ưu hóa về mặt thời gian, chi phí và độ an toàn trước khi đưa vào ứng dụng thực tế.
+
+\section{Tình hình nghiên cứu trong và ngoài nước}
+Trong những năm gần đây, mô phỏng phần cứng trong vòng lặp đã được nghiên cứu và ứng dụng ngày càng nhiều trong lĩnh vực thiết bị nhúng và IoT, nhằm phục vụ kiểm thử firmware và giao tiếp ngoại vi. Thay vì tập trung vào các hệ thống quy mô lớn như ô tô hay hàng không, nhiều nghiên cứu hướng đến HIL chi phí thấp, phù hợp với vi điều khiển và hệ thống nhúng phổ biến.
+
+Trên thế giới, nhiều nền tảng HIL chuyên dụng đã được phát triển để phục vụ nghiên cứu và kiểm thử hệ thống nhúng. Các thiết bị này cho phép mô phỏng môi trường vận hành và các thành phần bên ngoài của hệ thống, từ đó đánh giá hành vi của bộ điều khiển nhúng trong điều kiện gần với thực tế. Một ví dụ tiêu biểu là nền tảng Typhoon HIL 404, được sử dụng để mô phỏng và kiểm thử các hệ thống điều khiển nhúng trong thời gian thực, giúp phát hiện sớm các lỗi thiết kế và thuật toán điều khiển trước khi triển khai phần cứng thật.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/typhoon_HIL_404.png}
+    \caption{Thiết bị Typhoon HIL 404 cho kiểm thử hệ thống nhúng}
+    \label{fig:typhoon_HIL_404}
+\end{figure}
+
+Bên cạnh các thiết bị HIL chuyên dụng, nhiều nghiên cứu đã sử dụng các công cụ mô phỏng phần mềm như MATLAB/Simulink và LabVIEW để xây dựng môi trường HIL cho hệ thống nhúng. Các công cụ này cho phép mô hình hóa hành vi của cảm biến, ngoại vi và các khối chức năng, đồng thời kết nối trực tiếp với phần cứng nhúng thông qua các giao tiếp tiêu chuẩn. Cách tiếp cận này mang lại tính linh hoạt cao, chi phí thấp hơn và phù hợp với nghiên cứu, đào tạo cũng như phát triển các ứng dụng nhúng và IoT.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/SimulinkRealTime.jpg}
+    \caption{Matlab Simlink mô phỏng HIL của hệ thống thời gian thực}
+    \label{fig:SimulinkRealTime}
+\end{figure}
+
+Tại Việt Nam, các hệ thống HIL chủ yếu được tiếp cận thông qua nghiên cứu và đào tạo, với trọng tâm là ứng dụng các công cụ mô phỏng phần mềm kết hợp với phần cứng nhúng phổ biến. Các giải pháp HIL chuyên dụng vẫn còn hạn chế do chi phí đầu tư cao, trong khi các mô hình HIL linh hoạt dựa trên phần mềm và vi điều khiển được đánh giá là phù hợp hơn với điều kiện nghiên cứu trong nước. Điều này cho thấy tiềm năng phát triển các hệ thống HIL cho thiết bị nhúng theo hướng đơn giản, dễ triển khai và chi phí thấp.
+
+\section{Phạm vi nghiên cứu và nhiệm vụ đề tài}
+\subsection{Phạm vi nghiên cứu}
+\begin{itemize}
+    \item \textbf{Phạm vi kỹ thuật:}
+    \begin{itemize}
+        \item[-] Tập trung vào việc thiết kế phần cứng gồm khối HIL Generator để phát tín hiệu, khối HIL Collector để thu thập các sóng thu thập từ DUT.
+        \item[-] Phát triển firmware sử dụng hệ điều hành thời gian thực quản lý đa nhiệm để mô phỏng các thiết bị ngoại vi, môi trường hoạt động và các giao thức truyền thông phổ biến.
+        \item[-] Xây dựng phần mềm trên máy tính để cấu hình, giám sát hệ thống và tích hợp nền tảng Robot Framework nhằm thực thi, theo dõi các kịch bản kiểm thử tự động.
+        \item[-] Hệ thống tập trung chủ yếu vào việc kiểm thử chức năng và hành vi của firmware trên DUT, không đi sâu vào kiểm thử các giới hạn vật lý hay độ bền của linh kiện phần cứng.
+    \end{itemize}
+
+    \item \textbf{Phạm vi ứng dụng:}
+    \begin{itemize}
+        \item[-] Áp dụng phục vụ cho mục đích nghiên cứu, phát triển (R\&D) và hỗ trợ kiểm thử phần mềm nhúng.
+        \item[-] Cung cấp một nền tảng phần cứng và bộ thư viện phần mềm linh hoạt để người dùng tự do cấu hình các kịch bản kiểm thử tùy chỉnh.
+        \item[-] Chưa triển khai dưới dạng sản phẩm đóng gói thương mại ở quy mô công nghiệp, hoặc áp dụng trực tiếp cho các hệ thống đòi hỏi tiêu chuẩn khắt khe (như hàng không, ô tô, y tế).
+    \end{itemize}
+\end{itemize}
+
+
+\subsection{Nhiệm vụ đề tài}
+\begin{itemize}
+    \item Tìm hiểu cơ sở lý thuyết
+    \begin{itemize}
+        \item[-] Tìm hiểu về kiến trúc, nguyên lý hoạt động của hệ thống kiểm thử phần cứng trong vòng lặp (Hardware-in-the-Loop - HIL).
+        \item[-] Nghiên cứu các chuẩn giao tiếp ngoại vi phổ biến và kỹ thuật lập trình đa nhiệm trong hệ thống nhúng với hệ điều hành thời gian thực.
+        \item[-] Tìm hiểu các phương pháp kiểm thử phần mềm tự động và nền tảng Robot Framework.
+        \item[-] Tìm hiểu cơ sở lý thuyết và ứng dụng của thuật toán Biến đổi Fourier nhanh (FFT) trong việc phân tích phổ các dạng sóng tín hiệu.
+        \item[-] Tìm hiểu về Boot mode của STM32 để HIL có thể nạp chương trình cho DUT thông qua giao tiếp USB thay vì sử dụng mạch nạp ST-Link truyền thống.
+        \item[-] Khảo sát các phương pháp kiểm thử phần mềm tự động và nền tảng Robot Framework.
+    \end{itemize}
+
+    \item Từ các yêu cầu trên, thực hiện thiết kế, triển khai phần cứng
+    \begin{itemize}
+        \item[-] Thiết kế sơ đồ khối, sơ đồ nguyên lý và lựa chọn linh kiện.
+        \item[-] HIL có khả năng điều khiển trạng thái của thiết bị kiểm thử như cấp nguồn, kích hoạt chế độ Boot cho DUT.
+        \item[-] Đảm bảo khả năng tương thích và các header mở rộng để linh hoạt kiểm thử thiết bị.
+    \end{itemize}
+
+    \item Tiến hành thi công, lắp ráp hoàn chỉnh. Thực hiện firmware cho HIL Generator và HIL Collector để thử nghiệm các chức năng.
+
+    \item Xây dựng bộ thư viện điều khiển HIL Generator và HIL Collector bằng Robot Framework để hỗ trợ người dùng có thể sử dụng cho việc kiểm thử cho firmware DUT.
+
+    \item Thiết kế phần mềm trên máy tính có giao diện trực quan để người dùng cấu hình tham số, gửi lệnh điều khiển và giám sát dữ liệu phản hồi.
+
+    \item Thử nghiệm toàn bộ hệ thống sau cùng để đảm bảo tính ổn định và chính xác.
+    \begin{itemize}
+        \item[-] Thực hiện firmware DUT mẫu để thử nghiệm kiểm thử.
+        \item[-] Thu thập, lưu trữ dữ liệu và log của các kịch bản kiểm thử.
+        \item[-] Đối chiếu hành vi thực tế của DUT, phân tích dạng sóng/phổ tín hiệu so với kịch bản kiểm thử, từ đó đánh giá chất lượng của phần mềm nhúng.
+    \end{itemize}
+\end{itemize}
+
+\begingroup
+\renewcommand{\arraystretch}{1.4} 
+% Bảng rút lại còn 2 cột: Cột chi tiết rộng 10.7cm, Cột người thực hiện 2.5cm
+\begin{longtable}{|>{\raggedright\arraybackslash}p{10.7cm} |>{\centering\arraybackslash}p{2.5cm}|}
+    \caption{Bảng phân công nhiệm vụ chi tiết}
+    \label{tab:phan_cong} \\
+    \hline
+    \multicolumn{1}{|c|}{\textbf{Chi tiết công việc}} & \textbf{Người thực hiện} \\
+    \hline
+    \endfirsthead
+    
+    % ĐẦU TRANG TIẾP THEO (Chỉ kẻ 1 đường ngang trên cùng để đóng khung)
+    \hline
+    \endhead
+    
+    % CUỐI TRANG BỊ NGẮT (Để trống hoàn toàn)
+    \endfoot
+    
+    % CUỐI BẢNG (Đóng viền dưới cùng của bảng ở trang cuối)
+    \hline
+    \endlastfoot
+
+    % ================= NỘI DUNG BẢNG =================
+
+    - Nghiên cứu kiến trúc HIL, RTOS, Robot Framework, thuật toán FFT và chế độ Boot của STM32.\newline
+    - Xây dựng cấu trúc firmware cơ bản cho hệ thống mô phỏng HIL và thiết bị cần kiểm thử (DUT).\newline
+    - Thiết kế bộ khung nền tảng cho phần mềm giao diện máy tính (App GUI) sử dụng Python.\newline
+    - Xây dựng bộ thư viện điều khiển tự động bằng Robot Framework và soạn thảo các kịch bản kiểm thử (Test cases). & 
+    \textbf{Chung} \\
+    \hline
+    
+    - Thiết kế phần cứng, sơ đồ khối, sơ đồ nguyên lý, lựa chọn linh kiện và lắp ráp mạch PCB hoàn chỉnh.\newline
+    - Phát triển firmware cho HIL Collector để phục vụ công tác đo lường và bắt xung tín hiệu.\newline
+    - Lập trình firmware HIL Generator: Xử lý cấu hình ngoại vi CAN, ADC, DAC và mô phỏng hoạt động của SPI FLASH.\newline
+    - Thiết kế tính năng xuất tín hiệu Analog (phát dạng sóng sin, sóng tam giác).\newline
+    - Triển khai thuật toán Biến đổi Fourier nhanh (FFT) để phân tích phổ tín hiệu số và nhận diện sóng sin.\newline
+    - Cập nhật giao diện trên PC: Tích hợp module cấu hình, gửi lệnh và hiển thị dữ liệu trực quan cho CAN, ADC, SPI. \newline
+    - Vẽ dạng sóng thu thập từ HIL Collector lên App. &
+    \textbf{Ve Samy} \\
+    \hline
+
+    - Kiểm tra bản vẽ thiết kế phần cứng trước khi tiến hành gia công.\newline
+    - Lập trình firmware HIL Generator: Xử lý ngoại vi UART, I2C, mô phỏng các thiết bị EEPROM và module thời gian thực (RTC).\newline
+    - Triển khai tính năng điều khiển I/O: Tạo xung PWM, cấu hình các chân GPIO phục vụ đọc/xuất tín hiệu Digital.\newline
+    - Triển khai thuật toán Biến đổi Fourier nhanh (FFT) để phân tích phổ tín hiệu số và nhận diện sóng tam giác.\newline
+    - Xây dựng cơ chế điều khiển phần cứng để kích hoạt tự động chế độ Boot, hỗ trợ nạp firmware cho DUT qua USB.\newline
+    - Cập nhật giao diện trên PC: Tích hợp module cho I2C, UART, điều khiển PWM, Digital. & 
+    \textbf{Thảo Vy} \\
+    \hline
+    
+    - Tích hợp \& Kiểm thử toàn hệ thống\newline
+    - Thực thi firmware DUT mẫu và chạy các kịch bản kiểm thử tự động.\newline
+    - Thu thập log dữ liệu, đối chiếu hành vi thực tế của DUT, phân tích dạng sóng/phổ tín hiệu.\newline
+    - Đánh giá độ kết quả thu thập được từ DUT và chất lượng của phần mềm nhúng. & 
+    \textbf{Chung} \\
+
+\end{longtable}
+\endgroup

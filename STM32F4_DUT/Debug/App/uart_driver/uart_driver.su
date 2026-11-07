@@ -1,0 +1,7 @@
+../App/uart_driver/uart_driver.c:19:6:HAL_UART_RxCpltCallback	24	static
+../App/uart_driver/uart_driver.c:39:6:UART_Init	8	static
+../App/uart_driver/uart_driver.c:45:10:UART_Available	4	static
+../App/uart_driver/uart_driver.c:54:10:UART_Read	24	static
+../App/uart_driver/uart_driver.c:67:6:UART_Clear	4	static
+../App/uart_driver/uart_driver.c:73:6:UART_Send	16	static
+../App/uart_driver/uart_driver.c:78:6:UART_Send_String	24	static

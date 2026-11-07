@@ -1,0 +1,13 @@
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:196:15:pxPortInitialiseStack	1
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:228:13:prvTaskExitError	3
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:254:6:SVC_Handler	1
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:272:13:prvPortStartFirstTask	1
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:299:12:xPortStartScheduler	7
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:455:6:vPortEndScheduler	2
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:463:6:vPortEnterCritical	3
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:480:6:vPortExitCritical	3
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:492:6:PendSV_Handler	1
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:550:6:SysTick_Handler	2
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:802:32:vPortSetupTimerInterrupt	1
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:824:13:vPortEnableVFP	1
+../FreeRTOS/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.c:841:10:vPortValidateInterruptPriority	4

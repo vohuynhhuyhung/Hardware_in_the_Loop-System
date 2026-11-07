@@ -1,0 +1,7 @@
+../App/CMDLine/Core/cmd.c:38:12:Cmd_help	160	static
+../App/CMDLine/Core/cmd.c:49:12:Cmd_Clear_CLI	16	static
+../App/CMDLine/Core/cmd.c:56:6:CLI_RegisterCommand	24	static
+../App/CMDLine/Core/cmd.c:66:13:process_command	24	static
+../App/CMDLine/Core/cmd.c:105:13:CLI_Task_Update	16	static
+../App/CMDLine/Core/cmd.c:131:6:CLI_Task	16	static
+../App/CMDLine/Core/cmd.c:138:6:CLI_Init	8	static

@@ -1,0 +1,47 @@
+name: HIL CI
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # poll registered user repos for new commits
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Registry name to force-run (optional)"
+        required: false
+      ref:
+        description: "Branch or commit SHA for that repo (optional)"
+        required: false
+
+# One physical bench: never run two jobs at once, never cancel a running one.
+concurrency:
+  group: hil-bench
+  cancel-in-progress: false
+
+jobs:
+  hil:
+    runs-on: [self-hosted, windows, hil]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python deps
+        run: python -m pip install -r HIL_ci/requirements.txt
+
+      - name: Poll registry and run HIL tests
+        env:
+          ONLY: ${{ github.event.inputs.only }}
+          REF: ${{ github.event.inputs.ref }}
+        shell: pwsh
+        run: |
+          $a = @()
+          if ($env:ONLY) { $a += @("--only", $env:ONLY) }
+          if ($env:REF)  { $a += @("--ref", $env:REF) }
+          python HIL_ci/poll_registry.py @a
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hil-results-${{ github.run_id }}
+          path: hil_artifacts/**
+          if-no-files-found: ignore

@@ -1,0 +1,12 @@
+../Drivers/CMSIS/Include/core_cm7.h:1896:22:__NVIC_EnableIRQ	16	static
+../Drivers/CMSIS/Include/core_cm7.h:2024:22:__NVIC_SetPriority	16	static
+../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_spi.h:1371:22:LL_SPI_TransmitData8	24	static
+../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_system.h:513:22:LL_SYSCFG_SetEXTISource	24	static,ignoring_inline_asm
+../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_exti.h:830:26:LL_EXTI_IsActiveFlag_0_31	16	static
+../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_exti.h:904:22:LL_EXTI_ClearFlag_0_31	16	static
+../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_gpio.h:800:26:LL_GPIO_IsInputPinSet	16	static
+../App/EmuDrivers/Src/w25q_slave.c:25:6:W25Q_Slave_Init	24	static
+../App/EmuDrivers/Src/w25q_slave.c:41:13:Reset_W25Q	16	static
+../App/EmuDrivers/Src/w25q_slave.c:50:6:W25Q_Slave_IRQHandler	24	static
+../App/EmuDrivers/Src/w25q_slave.c:118:6:W25Q_PrepareData	24	static
+../App/EmuDrivers/Src/w25q_slave.c:129:6:EXTI9_5_IRQHandler	8	static

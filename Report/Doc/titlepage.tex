@@ -1,0 +1,57 @@
+\begin{titlepage}
+% --------------------- Khung viền đẹp ---------------------
+    \begin{tikzpicture}[remember picture,overlay,inner sep=0,outer sep=0]
+    \draw[blue!70!black,line width=4pt] 
+        ([xshift=-1.5cm,yshift=-1.5cm]current page.north east) coordinate (A)--
+        ([xshift=3cm,yshift=-1.5cm]current page.north west) coordinate(B)--
+        ([xshift=3cm,yshift=1.5cm]current page.south west) coordinate (C)--
+        ([xshift=-1.5cm,yshift=1.5cm]current page.south east) coordinate(D)--cycle;
+        
+    \draw ([yshift=0.5cm,xshift=-0.5cm]A)-- ([yshift=0.5cm,xshift=0.5cm]B)--
+        ([yshift=-0.5cm,xshift=0.5cm]B) --([yshift=-0.5cm,xshift=-0.5cm]B)--([yshift=0.5cm,xshift=-0.5cm]C)--([yshift=0.5cm,xshift=0.5cm]C)--([yshift=-0.5cm,xshift=0.5cm]C)-- ([yshift=-0.5cm,xshift=-0.5cm]D)--([yshift=0.5cm,xshift=-0.5cm]D)--([yshift=0.5cm,xshift=0.5cm]D)--([yshift=-0.5cm,xshift=0.5cm]A)--([yshift=-0.5cm,xshift=-0.5cm]A)--([yshift=0.5cm,xshift=-0.5cm]A);
+        
+    \draw ([yshift=-0.3cm,xshift=0.3cm]A)-- ([yshift=-0.3cm,xshift=-0.3cm]B)--
+        ([yshift=0.3cm,xshift=-0.3cm]B) --([yshift=0.3cm,xshift=0.3cm]B)--([yshift=-0.3cm,xshift=0.3cm]C)--([yshift=-0.3cm,xshift=-0.3cm]C)--([yshift=0.3cm,xshift=-0.3cm]C)-- ([yshift=0.3cm,xshift=0.3cm]D)--([yshift=-0.3cm,xshift=0.3cm]D)--([yshift=-0.3cm,xshift=-0.3cm]D)--([yshift=0.3cm,xshift=-0.3cm]A)--([yshift=0.3cm,xshift=0.3cm]A)--([yshift=-0.3cm,xshift=0.3cm]A);
+    \end{tikzpicture}
+\vspace{-2cm}
+\begin{center}
+    % Tên trường - in hoa đậm
+    {\fontsize{16pt}{20pt}\selectfont\textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH}}\\[4pt]
+    {\fontsize{16pt}{20pt}\selectfont\textbf{TRƯỜNG ĐẠI HỌC BÁCH KHOA}}\\[4pt]
+    {\fontsize{16pt}{18pt}\selectfont\textbf{KHOA ĐIỆN - ĐIỆN TỬ}}\\[4pt]
+    \centerline{--------------------o0o--------------------}
+        % Logo trường
+    \includegraphics[width=0.35\textwidth]{./image/hcmut.png}\\
+    \vspace*{0.5cm}
+
+    % Tiêu đề báo cáo
+    {\Large\bfseries{ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC}}\\[20pt]
+    
+    \rule{11cm}{1.6pt}\\[10pt]
+    {\Large\bfseries HỆ THỐNG MÔ PHỎNG\\PHẦN CỨNG TRONG VÒNG LẶP}\\
+    {\large\bfseries (Hardware-in-the-Loop System)}\\[10pt]
+    \rule{14cm}{1.5pt}\\[10pt]
+
+    \vspace*{1cm}
+    % Giảng viên hướng dẫn
+    {\large\bfseries GVHD: ThS. Bùi Quốc Bảo}\\[15pt]
+    % Nhóm sinh viên
+    {\fontsize{15}{19}\selectfont
+    \begin{tabular}{c@{\hspace{3.5cm}}c}
+        \bfseries Sinh viên thực hiện & \bfseries MSSV \\[8pt]
+        Ve Samy                          & 2212901  \\
+        Trần Nguyễn Thảo Vy              & 2214052  \\
+    \end{tabular}}
+
+    \vspace{0.5cm}
+    {\textbf{Mã cuốn:} 47\_5}
+    
+    \vfill
+    
+    % Ngày tháng
+      
+    {TP.HỒ CHÍ MINH, THÁNG \number\month\ NĂM \number\year}\\
+
+    % \vspace*{0.75cm} 
+\end{center}
+\end{titlepage}

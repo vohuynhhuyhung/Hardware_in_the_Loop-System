@@ -1,0 +1,46 @@
+\chapter{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+
+\section{Kết luận}
+
+Sau quá trình thực hiện đề tài, nhóm đã tích lũy được nhiều kiến thức và kỹ năng thực tiễn, góp phần hoàn thiện năng lực chuyên môn:
+\begin{itemize}
+    \item Về lý thuyết, củng cố lại kiến thức về các giao thức truyền thông của vi điều khiển. Tìm hiểu và ứng dụng thuật toán Fast Fourier Transform - FFT để phân tích các dạng sóng.
+    \item Thiết kế phần cứng cần đưa ra các phương án và đánh giá ưu - nhược điểm của từng phương án từ đó lựa chọn giải pháp tối ưu nhất phù hợp với yêu cầu hệ thống.
+    \item Về bố trí linh kiện trên mạch in, cần sắp xếp sao cho tối ưu nhằm đảm bảo tính ổn định và các thao tác đo đạc trong quá trình phát triển phần cứng.
+    \item Về kỹ thuật lập trình, quá trình thực hiện đề tài giúp nhóm nắm vững kiến thức lập trình nền tảng, cách gỡ lỗi trong quá trình phát triển, đồng thời nâng cao hiểu biết về hệ điều hành thời gian thực RTOS.
+    \item Học thêm một Framework mới (Robot Framework) hỗ trợ cho việc kiểm thử tự động cho các hệ thống.
+\end{itemize}
+
+Từ những kết quả đạt được, đề tài không chỉ mang lại giá trị học thuật mà còn giúp nhóm định hướng rõ hơn cho con đường phát triển nghề nghiệp trong lĩnh vực kỹ thuật và công nghệ cao.
+
+\subsection{Ưu điểm của đề tài}
+\begin{itemize}
+    \item Hệ thống có khả năng mô phỏng được một số phần cứng như SPI Flash, I2C EEPROM, I2C RTC.
+    \item Cung cấp đầy đủ các tín hiệu digital, analog và các chuẩn giao tiếp truyền thông.
+    \item Có khả năng thu thập dữ liệu từ thiết bị DUT, hỗ trợ người dùng theo dõi và phân tích tín hiệu trong quá trình hoạt động.
+    \item Tích hợp phần mềm điều khiển và bộ thư viện Robot Framework, hỗ trợ xây dựng kịch bản kiểm thử tự động và lưu trữ kết quả của từng lần kiểm thử khác nhau.
+    \item Hỗ trợ điều khiển nguồn và nạp chương trình cho thiết bị DUT thông qua USB, không cần kết nối ST-Link.
+\end{itemize}
+
+\subsection{Khuyết điểm của đề tài}
+\begin{itemize}
+    \item Chưa thể mô phỏng được những tín hiệu có nhiễu vật lý như nút nhấn, encoder,\dots
+    \item Đối với một số giao thức tốc độ cao như CAN hoặc SPI, tốc độ giao tiếp cần được giảm xuống để đảm bảo hệ thống có đủ thời gian xử lý và phản hồi dữ liệu chính xác bằng phần mềm.
+    \item Baudrate của các giao thức như CAN, UART chưa thể hỗ trợ cấu hình linh động.
+    \item Tần số lấy mẫu của HIL Collector vẫn còn giới hạn, ảnh hưởng đến khả năng thu thập và phân tích các tín hiệu có tốc độ cao.
+\end{itemize}
+
+Tóm lại, mặc dù hệ thống vẫn còn tồn tại một số hạn chế nhất định, nhưng nhìn chung các mục tiêu đề ra ban đầu của đề tài đã được đáp ứng đầy đủ.
+Sự phối hợp giữa phần cứng và phần mềm được thực hiện ổn định, cho phép hệ thống hỗ trợ hiệu quả quá trình kiểm thử và mô phỏng thiết bị DUT.
+Đồng thời, đề tài cũng tạo nền tảng để tiếp tục phát triển và mở rộng thêm các tính năng trong tương lai.
+
+\section{Hướng phát triển}
+Mặc dù đã đạt được các kết quả tích cực, hệ thống HIL trong đồ án vẫn còn nhiều tiềm năng để tiếp tục hoàn thiện và mở rộng trong tương lai. Một số hướng phát triển chính được đề xuất như sau:
+
+\begin{itemize}
+    \item Mở rộng khả năng mô phỏng nhiều phần cứng hơn như nhiệt độ, độ ẩm, gia tốc để tăng tính linh hoạt và ứng dụng thực tế.
+    \item Tích hợp mạng cho hệ thống. Từ đó hệ thống sẽ hoạt động độc lập mà không cần phải kết nối trực tiếp với máy tính thông qua USB. Các dữ liệu thu thập sẽ được gửi về máy chủ để lưu trữ, giám sát và xử lý từ xa.
+    \item Tích hợp hệ thống với các nền tảng quản lý phiên bản như Git nhằm hướng tới mô hình kiểm thử tự động hoàn toàn. Hệ thống có thể tự động phát hiện các pull request mới, tải mã nguồn về để biên dịch và thực hiện kiểm thử trên phần cứng thực tế.
+    Sau khi toàn bộ bài kiểm thử đạt yêu cầu, hệ thống có thể tự động xác nhận và thực hiện merge, giúp tối ưu quy trình phát triển và kiểm thử phần mềm nhúng theo hướng CI/CD.
+\end{itemize}
+

@@ -1,0 +1,6 @@
+../App/CMDLine/Commands/gpio_cmd.c:13:22:parse_port	16	static
+../App/CMDLine/Commands/gpio_cmd.c:31:13:gpio_print_cb	32	static
+../App/CMDLine/Commands/gpio_cmd.c:44:12:Cmd_GPIO_List	24	static
+../App/CMDLine/Commands/gpio_cmd.c:56:12:Cmd_GPIO_Write	32	static
+../App/CMDLine/Commands/gpio_cmd.c:82:12:Cmd_GPIO_Read	32	static
+../App/CMDLine/Commands/gpio_cmd.c:105:6:Cmd_GPIO_Register	8	static

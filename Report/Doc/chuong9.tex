@@ -1,0 +1,1622 @@
+\chapter{KẾT QUẢ THỰC HIỆN}
+
+Chương này trình bày các kết quả đạt được sau quá trình thiết kế, xây dựng và triển khai hệ thống Hardware-in-the-Loop cho kiểm thử phần mềm nhúng. Các kết quả được phân tích theo ba thành phần chính của hệ thống bao gồm: phần mềm HIL, phần mềm giao diện trên máy tính và phần mềm kiểm thử tự động. Qua đó đánh giá mức độ đáp ứng yêu cầu thiết kế cũng như khả năng ứng dụng thực tế của hệ thống.
+
+\section{Kết quả thực hiện phần cứng}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/pcb_layout.jpg}
+    \caption{Vị trí các chân ngoại vi trên hệ thống}
+    \label{fig:pcb_layout}
+\end{figure}
+\vspace{1cm}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \centering
+        \captionsetup{width=6cm, justification=centering}
+        \includegraphics[width=\textwidth]{image/pcb_pre_final_top.jpg}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.49\textwidth}
+        \centering
+        \captionsetup{width=6cm, justification=centering}
+        \includegraphics[width=\textwidth]{image/pcb_pre_final_bot.jpg}
+    \end{minipage}
+    \caption{PCB mặt trước và sau}
+\end{figure}
+\vspace{1cm}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/pcb_final.jpg}
+    \caption{PCB sau khi gia công}
+    \label{fig:pcb_final}
+\end{figure}
+
+\section{Kết quả thực hiện phần mềm HIL Generator}
+
+\subsection{Kết quả mô phỏng ngoại vi}
+
+Phần này trình bày kết quả thực nghiệm của các khối ngoại vi được tích hợp trong hệ thống HIL, bao gồm GPIO, ADC, DAC, PWM, UART và CAN. Các kết quả được đánh giá dựa trên khả năng tạo và thu nhận tín hiệu, độ chính xác cũng như tính ổn định trong quá trình hoạt động thực tế.
+
+\subsubsection{Kết quả mô phỏng GPIO}
+
+Hệ thống HIL hỗ trợ mô phỏng và kiểm thử tín hiệu GPIO nhằm đánh giá các chức năng điều khiển và đọc tín hiệu số của DUT. Khối GPIO được xây dựng trên vi điều khiển STM32F407VET6 với mức điện áp logic 3.3V.
+
+
+\begin{table}[H]
+\centering
+\caption{Đặc tính GPIO của hệ thống HIL}
+\label{tab:gpio_support}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Thông số} & \textbf{Giá trị} & \textbf{Mô tả} \\
+\hline
+
+Số lượng GPIO Input 
+& 14 chân 
+& Hỗ trợ đọc tín hiệu số từ DUT thông qua các chân PE0 -- PE13 \\
+\hline
+
+Số lượng GPIO Output 
+& 12 chân 
+& Hỗ trợ xuất tín hiệu số điều khiển DUT thông qua các chân PB0 -- PB5 và PB10 -- PB15 \\
+\hline
+
+Chế độ hỗ trợ 
+& Input / Output 
+& Hỗ trợ kiểm thử tín hiệu số theo cả hai chiều giao tiếp \\
+\hline
+
+\end{tabularx}
+\end{table}
+
+Do sử dụng vi điều khiển STM32F407VET6, các chân GPIO của hệ thống HIL tuân theo đặc tính điện áp logic của dòng vi điều khiển này. Theo tài liệu kỹ thuật của STM32F407VET6 tại mức điện áp hoạt động 3.3V, các ngưỡng điện áp logic được trình bày trong Bảng \ref{tab:gpio_logic_level}.
+
+\begin{table}[H]
+\centering
+\caption{Ngưỡng điện áp logic GPIO của STM32F407VET6}
+\label{tab:gpio_logic_level}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Mức logic} & \textbf{Điện áp} \\
+\hline
+
+Logic Low ($V_{IL}$) 
+& $\le 0.3V_{DD}$ ($\approx 0.99V$ tại $V_{DD}=3.3V$) \\
+\hline
+
+Logic High ($V_{IH}$) 
+& $\ge 0.7V_{DD}$ ($\approx 2.31V$ tại $V_{DD}=3.3V$) \\
+\hline
+
+Vùng chuyển mức 
+& Khoảng từ $0.99V$ đến $2.31V$ \\
+\hline
+
+\end{tabular}
+
+\end{table}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.65\textwidth]{image/gpio_pcb.png}
+%     \caption{Vị trí các chân GPIO trên hệ thống HIL}
+%     \label{fig:gpio_pcb}
+% \end{figure}
+
+\subsubsection{Kết quả mô phỏng ADC}
+
+Hệ thống HIL hỗ trợ cả chức năng đọc và tạo tín hiệu tương tự nhằm phục vụ các bài kiểm thử liên quan đến xử lý tín hiệu tương tự trên DUT. Khối ADC được sử dụng để đọc điện áp tương tự từ DUT hoặc môi trường mô phỏng, trong khi khối DAC đảm nhiệm việc tạo tín hiệu tương tự đầu vào theo yêu cầu kiểm thử.
+
+Các chức năng ADC/DAC được xây dựng trên vi điều khiển STM32F407VET6 với điện áp tham chiếu 3.3V và hỗ trợ hoạt động trong dải điện áp từ 0V đến 3.3V. Bảng \ref{tab:adc_support} trình bày đặc tính hỗ trợ ADC của hệ thống HIL.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tính hỗ trợ ADC của hệ thống HIL}
+\label{tab:adc_support}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Thông số} & \textbf{Giá trị} & \textbf{Mô tả} \\
+\hline
+
+Số lượng kênh ADC hỗ trợ 
+& 1 kênh 
+& Hỗ trợ đọc tín hiệu tương tự thông qua chân PC0 \\
+\hline
+
+Dải điện áp hoạt động 
+& 0V -- 3.3V 
+& Hỗ trợ đọc và tạo tín hiệu tương tự trong toàn bộ dải điện áp hoạt động \\
+\hline
+
+Độ phân giải ADC/DAC 
+& 12-bit 
+& Độ phân giải tương ứng với ngoại vi ADC và DAC của STM32F407VET6 \\
+\hline
+
+Điện áp tham chiếu 
+& 3.3V 
+& Điện áp tham chiếu sử dụng cho quá trình chuyển đổi ADC/DAC \\
+\hline
+
+\end{tabularx}
+\end{table}
+
+Giá trị ADC lý thuyết được xác định theo công thức:
+
+\[
+ADC_{value} = \frac{V_{in}}{V_{ref}} \times (2^{12}-1)
+\]
+
+Trong đó:
+
+\begin{itemize}
+    \item $V_{in}$ là điện áp đầu vào cần đo.
+    \item $V_{ref}$ là điện áp tham chiếu ADC (3.3V).
+    \item ADC có độ phân giải 12-bit nên giá trị tối đa là 4095.
+\end{itemize}
+
+Để đánh giá khả năng hoạt động của khối ADC, hệ thống tiến hành đọc các mức điện áp lần lượt từ 0.5V đến 3V bằng ADC. Kết quả kiểm thử được trình bày trong Bảng \ref{tab:adc_test_result}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử ADC}
+\label{tab:adc_test_result}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Điện áp đầu vào} & \textbf{ADC lý thuyết} & \textbf{ADC đọc được} & \textbf{Sai số toàn thang} \\
+\hline
+
+0.5V & 620  & 639  & 0.46\% \\
+\hline
+
+1.0V & 1240 & 1261 & 0.51\% \\
+\hline
+
+1.5V & 1861 & 1907 & 1.12\% \\
+\hline
+
+2.0V & 2481 & 2524 & 1.05\% \\
+\hline
+
+2.5V & 3102 & 3163 & 1.49\% \\
+\hline
+
+3.0V & 3722 & 3796 & 1.81\% \\
+\hline
+
+\end{tabular}
+\end{table}
+
+Kết quả kiểm thử cho thấy giá trị ADC đo được có sai số nhỏ hơn 2\% so với giá trị lý thuyết. Sai số tăng nhẹ theo điện áp đầu vào nhưng vẫn nằm trong giới hạn cho phép, cho thấy hệ thống có khả năng xử lý tín hiệu tương tự ổn định trong quá trình kiểm thử DUT.
+
+\subsubsection{Kết quả mô phỏng DAC}
+
+Hệ thống HIL hỗ trợ tạo và xuất tín hiệu tương tự thông qua bộ DAC tích hợp trên vi điều khiển nhằm phục vụ kiểm thử ADC hoặc các chức năng xử lý tín hiệu tương tự của DUT.
+
+Ngoài khả năng xuất điện áp DC cố định, hệ thống còn hỗ trợ phát các dạng sóng tương tự như sóng sine và sóng tam giác để mô phỏng tín hiệu cảm biến hoặc tín hiệu điều khiển trong quá trình kiểm thử firmware. Bảng \ref{tab:dac_support} trình bày đặc tính DAC của hệ thống HIL.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tính DAC của hệ thống HIL}
+\label{tab:dac_support}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Thông số} & \textbf{Giá trị} & \textbf{Mô tả} \\
+\hline
+
+Số lượng DAC 
+& 2 kênh 
+& Hỗ trợ xuất tín hiệu tương tự thông qua chân PA4(sóng sine và sóng tam giác) và PA5 (điện áp DCs)\\
+\hline
+
+Độ phân giải 
+& 12-bit 
+& Giá trị DAC nằm trong khoảng từ 0 đến 4095 \\
+\hline
+
+Dải điện áp đầu ra 
+& 0V -- 3.3V 
+& Điện áp đầu ra tương ứng với điện áp hoạt động của vi điều khiển \\
+\hline
+
+Điện áp tham chiếu 
+& 3.3V 
+& \\
+\hline
+
+Dạng sóng hỗ trợ 
+& DC / Sine / Triangle 
+& Hỗ trợ phát điện áp cố định và các dạng sóng phục vụ kiểm thử \\
+\hline
+
+Tần số dạng sóng hỗ trợ
+& 1Hz -- 10kHz
+& Giá trị tần số hỗ trợ phát các dạng sóng tương tự \\
+\hline
+
+\end{tabularx}
+\end{table}
+
+Để đánh giá khả năng xuất điện áp DC của DAC, hệ thống tiến hành thiết lập nhiều mức giá trị DAC khác nhau và đo điện áp đầu ra thực tế bằng thiết bị đo ngoài. Kết quả kiểm thử được trình bày trong Bảng \ref{tab:dac_voltage_result}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử điện áp đầu ra DAC}
+\label{tab:dac_voltage_result}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Giá trị DAC} & \textbf{Điện áp lý thuyết} & \textbf{Điện áp đo được} & \textbf{Sai số (\%)} \\
+\hline
+
+620  & 0.5V & 0.516V & 0.48\% \\
+\hline
+
+1240 & 1.0V & 1.025V & 0.76\% \\
+\hline
+
+1861 & 1.5V & 1.535V & 1.06\% \\
+\hline
+
+2481 & 2.0V & 2.031V & 0.94\% \\
+\hline
+
+3102 & 2.5V & 2.553V & 1.61\% \\
+\hline
+
+3722 & 3.0V & 3.059V & 1.79\% \\
+\hline
+
+\end{tabular}
+\end{table}
+
+Kết quả đo cho thấy điện áp đầu ra có sai số nhỏ và thay đổi tuyến tính theo giá trị DAC thiết lập. Sai số đo được nhỏ hơn 2\%, cho thấy hệ thống có khả năng tạo tín hiệu tương tự ổn định phục vụ cho các bài kiểm thử firmware.
+
+Bên cạnh khả năng xuất điện áp DC, hệ thống còn hỗ trợ tạo các dạng sóng sine và tam giác nhằm phục vụ kiểm thử chức năng ADC, xử lý tín hiệu hoặc các thuật toán điều khiển trên DUT. Hình \ref{fig:dac_sine_wave} và \ref{fig:dac_triangle_wave} trình bày tín hiệu sóng sine và sóng tam giác được tạo bởi hệ thống HIL.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/dac_sine_wave.jpg}
+    \caption{Tín hiệu sóng sine được tạo bởi DAC trên hệ thống HIL}
+    \label{fig:dac_sine_wave}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/dac_triangle_wave.jpg}
+    \caption{Tín hiệu sóng tam giác được tạo bởi DAC trên hệ thống HIL}
+    \label{fig:dac_triangle_wave}
+\end{figure}
+
+Chất lượng tín hiệu đầu ra được đánh giá thông qua việc so sánh tần số và điện áp đỉnh-đỉnh ($V_{pp}$) giữa giá trị thiết lập và giá trị đo được bằng oscilloscope. Kết quả được trình bày trong Bảng \ref{tab:dac_wave_result}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử tín hiệu DAC dạng sóng}
+\label{tab:dac_wave_result}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Dạng sóng} 
+& \textbf{Tần số mong đợi} 
+& \textbf{Tần số đo được} 
+& \textbf{$V_{pp}$ mong đợi} 
+& \textbf{$V_{pp}$ đo được} \\
+\hline
+
+Sóng sine
+& 10kHz 
+& 9.998kHz 
+& 3.3V 
+& 3.33V \\
+\hline
+
+Sóng tam giác
+& 2.5kHz 
+& 2.5003kHz 
+& 3.3V 
+& 3.36V \\
+\hline
+
+\end{tabular}
+\end{table}
+
+Kết quả thực nghiệm cho thấy các tín hiệu sóng sine và sóng tam giác được tạo bởi hệ thống HIL có tần số và biên độ gần với giá trị thiết lập. Điều này cho thấy hệ thống có khả năng tạo tín hiệu tương tự ổn định và đáp ứng tốt yêu cầu kiểm thử các chức năng xử lý tín hiệu tương tự trên DUT.
+
+\subsubsection{Kết quả mô phỏng PWM}
+
+Hệ thống HIL hỗ trợ tạo tín hiệu PWM nhằm phục vụ các bài kiểm thử điều khiển động cơ, điều chỉnh độ sáng LED hoặc kiểm thử các thuật toán xử lý tín hiệu số trên DUT.
+
+Tín hiệu PWM được tạo bởi các bộ timer của STM32F407VET6 và được xuất ra các chân GPIO tương ứng trên hệ thống HIL. Bảng \ref{tab:pwm_support} trình bày đặc tính PWM của hệ thống HIL.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tính PWM của hệ thống HIL}
+\label{tab:pwm_support}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Thông số} & \textbf{Giá trị} & \textbf{Mô tả} \\
+\hline
+
+Số lượng kênh PWM 
+& 4 kênh 
+& Hỗ trợ xuất tín hiệu PWM thông qua các chân PA0, PA1, PA2 và PA3 \\
+\hline
+
+Độ phân giải PWM 
+& 16-bit Timer 
+& Giá trị duty cycle được điều khiển thông qua bộ định thời của STM32F407VET6 \\
+\hline
+
+Dải tần số hỗ trợ 
+& 1Hz -- 5MHz 
+& Hỗ trợ tạo tín hiệu PWM với nhiều mức tần số khác nhau phục vụ kiểm thử \\
+\hline
+
+Duty cycle hỗ trợ 
+& 0\% -- 100\% 
+& Hỗ trợ điều chỉnh duty cycle linh hoạt \\
+\hline
+
+Điện áp đầu ra 
+& 0V -- 3.3V 
+& Tương thích mức điện áp logic của STM32F407VET6 \\
+\hline
+
+\end{tabularx}
+\end{table}
+
+Để đánh giá khả năng hoạt động của khối PWM, hệ thống tiến hành tạo các tín hiệu PWM với nhiều mức tần số và duty cycle khác nhau. Tín hiệu đầu ra được đo bằng máy đo sóng thực tếnhằm kiểm tra độ chính xác của tần số và duty cycle thực tế. Bảng \ref{tab:pwm_result} trình bày kết quả kiểm thử tín hiệu PWM của hệ thống HIL.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử tín hiệu PWM}
+\label{tab:pwm_result}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Tần số đặt} 
+& \textbf{Tần số đo được} 
+& \textbf{Duty cycle đặt} 
+& \textbf{Duty cycle đo được} 
+& \textbf{Sai số tần số} \\
+\hline
+
+200Hz 
+& 200.02Hz 
+& 30\% 
+& 29.998\% 
+& 0.01\% \\
+\hline
+
+1kHz 
+& 1.0001kHz 
+& 65\% 
+& 65.001\% 
+& 0.01\% \\
+\hline
+
+\end{tabular}
+\end{table}
+
+Hình \ref{fig:pwm_waveform_30} và \ref{fig:pwm_waveform_65} trình bày tín hiệu PWM được tạo bởi hệ thống HIL và đo bằng oscilloscope thực tế.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/pwm_waveform_30.jpg}
+    \caption{PWM được tạo bởi hệ thống HIL với tần số 200Hz, duty cycle 30\%}
+    \label{fig:pwm_waveform_30}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/pwm_waveform_65.jpg}
+    \caption{PWM được tạo bởi hệ thống HIL với tần số 1kHz, duty cycle 65\%}
+    \label{fig:pwm_waveform_65}
+\end{figure}
+
+Kết quả thực nghiệm cho thấy hệ thống có khả năng tạo tín hiệu PWM ổn định với sai số tần số và duty cycle rất nhỏ. Các giá trị đo được gần như trùng khớp với giá trị thiết lập ban đầu.
+
+\subsubsection{Kết quả mô phỏng UART}
+
+Hệ thống HIL hỗ trợ giao tiếp UART nhằm phục vụ các bài kiểm thử truyền nhận dữ liệu serial giữa DUT và môi trường mô phỏng. UART thường được sử dụng trong các hệ thống nhúng cho mục đích debug, cấu hình thiết bị hoặc trao đổi dữ liệu giữa các vi điều khiển.
+
+Khối UART được xây dựng dựa trên ngoại vi USART2 của STM32F407VET6 và hỗ trợ truyền nhận dữ liệu thông qua hai chân TX và RX. Bảng \ref{tab:uart_support} trình bày đặc tính UART của hệ thống HIL.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tính UART của hệ thống HIL}
+\label{tab:uart_support}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Thông số} & \textbf{Giá trị} & \textbf{Mô tả} \\
+\hline
+
+Số lượng cổng UART
+& 1 cổng
+& Sử dụng USART2 của STM32F407VET6 \\
+\hline
+
+Chân giao tiếp
+& PD5 (TX), PD6 (RX)
+& Hỗ trợ truyền và nhận dữ liệu UART \\
+\hline
+
+Mức điện áp
+& 3.3V
+& Tương thích mức điện áp logic của STM32F407VET6 \\
+\hline
+
+Baud rate hỗ trợ
+& 115200bps
+& Chỉ hỗ trợ một tốc độ truyền dữ liệu phục vụ kiểm thử \\
+\hline
+
+Định dạng dữ liệu
+& 8N1
+& 8 data bit, no parity, 1 stop bit \\
+\hline
+
+\end{tabularx}
+\end{table}
+
+Hình \ref{fig:uart_hil_to_dut} và Hình \ref{fig:uart_dut_to_hil} trình bày kết quả truyền nhận dữ liệu UART giữa DUT và hệ thống HIL.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/uart_hil_to_dut.png}
+    \caption{Kết quả truyền dữ liệu UART}
+    \label{fig:uart_hil_to_dut}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/uart_dut_to_hil.png}
+    \caption{Kết quả nhận dữ liệu UART}
+    \label{fig:uart_dut_to_hil}
+\end{figure}
+
+Kết quả kiểm thử cho thấy hệ thống có thể truyền và nhận dữ liệu UART ổn định ở tốc độ 115200bps. Dữ liệu trao đổi giữa HIL và DUT được nhận đúng nội dung và đúng thứ tự, không ghi nhận hiện tượng mất dữ liệu hoặc lỗi framing trong quá trình kiểm thử.
+
+\subsubsection{Kết quả mô phỏng CAN}
+
+Hệ thống HIL hỗ trợ giao tiếp CAN nhằm phục vụ các bài kiểm thử truyền nhận dữ liệu giữa DUT và môi trường mô phỏng. CAN là giao thức truyền thông phổ biến trong các hệ thống công nghiệp và ô tô nhờ độ tin cậy cao, khả năng phát hiện lỗi tốt và hoạt động ổn định trong môi trường nhiễu.
+
+Khối CAN được xây dựng dựa trên ngoại vi CAN1 của STM32F407VET6 kết hợp với CAN transceiver, hỗ trợ giao tiếp theo chuẩn CAN 2.0B.
+
+Trong hệ thống, HIL hoạt động như một node CAN có khả năng truyền và nhận dữ liệu với DUT thông qua cơ chế interrupt kết hợp buffer vòng nhằm hạn chế mất dữ liệu khi lưu lượng truyền tăng cao. Bảng \ref{tab:can_support} trình bày đặc tính CAN của hệ thống HIL.
+
+\begin{table}[H]
+\centering
+\caption{Đặc tính CAN của hệ thống HIL}
+\label{tab:can_support}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Thông số} & \textbf{Giá trị} & \textbf{Mô tả} \\
+\hline
+
+Số lượng CAN 
+& 1 cổng 
+& Sử dụng CAN1 của STM32F407VET6 \\
+\hline
+
+Chân giao tiếp 
+& PB9 (TX), PB8 (RX) 
+& Kết nối thông qua CAN transceiver để giao tiếp bus CAN \\
+\hline
+
+Chuẩn CAN hỗ trợ 
+& CAN 2.0B 
+& Hỗ trợ Standard ID (11-bit) và Extended ID \\
+\hline
+
+Tốc độ truyền 
+& 500 kbps
+& Chỉ hỗ trợ một tốc độ truyền dữ liệu phục vụ kiểm thử  \\
+\hline
+
+Kích thước dữ liệu 
+& 0 -- 8 byte 
+& Hỗ trợ CAN data frame tiêu chuẩn \\
+\hline
+
+\end{tabularx}
+\end{table}
+
+Kết quả kiểm thử cho thấy hệ thống có thể truyền và nhận dữ liệu CAN ổn định ở tốc độ 500kbps. Dữ liệu truyền và phản hồi từ DUT được ghi nhận chính xác theo đúng thứ tự, đảm bảo tính toàn vẹn dữ liệu trong quá trình kiểm thử. Hệ thống cũng có khả năng xử lý các tình huống lỗi như lỗi bit hoặc lỗi CRC thông qua cơ chế phát hiện lỗi tích hợp của CAN, giúp đảm bảo độ tin cậy trong quá trình kiểm thử DUT.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/can_transmission.png}
+    \caption{Kết quả truyền nhận dữ liệu CAN giữa DUT và hệ thống HIL}
+    \label{fig:can_transmission}
+\end{figure}
+
+\subsection{Kết quả mô phỏng thiết bị}
+
+
+Hệ thống mô phỏng ngoại vi hỗ trợ mô phỏng các thiết bị giao tiếp phổ biến gồm EEPROM giao tiếp I2C, đồng hồ thời gian thực RTC giao tiếp I2C và bộ nhớ Flash giao tiếp SPI. 
+
+Đối với giao tiếp I2C, hệ thống cho phép khởi tạo nhiều thiết bị EEPROM mô phỏng với các địa chỉ khác nhau trên cùng một bus I2C. Tuy nhiên, tại một thời điểm chỉ có một thiết bị được kích hoạt để giao tiếp. Việc lựa chọn thiết bị được thực hiện thông qua lệnh từ máy tính gửi xuống hệ thống mô phỏng. Khi địa chỉ thiết bị trên bus I2C được thay đổi, thiết bị tương ứng với địa chỉ đó sẽ trở thành thiết bị hoạt động và phản hồi các yêu cầu đọc/ghi dữ liệu từ DUT.
+
+Hệ thống hỗ trợ mô phỏng:
+\begin{itemize}
+    \item Nhiều EEPROM I2C với kích thước bộ nhớ và kích thước trang ghi khác nhau.
+    \item Một thiết bị RTC giao tiếp I2C theo cơ chế thanh ghi tương tự DS1307.
+    \item Một bộ nhớ Flash SPI với tập lệnh đọc, ghi và xóa cơ bản.
+\end{itemize}
+
+Tốc độ giao tiếp được hệ thống hỗ trợ gồm:
+\begin{itemize}
+    \item I2C: Standard Mode (100 kHz).
+    \item SPI: hỗ trợ giao tiếp SPI mode 2 chế độ slave với tốc độ kiểm thử lên đến 234.375 kBits/s.
+\end{itemize}
+
+\subsubsection{Kết quả mô phỏng I2C EEPROM}
+
+Thiết bị EEPROM mô phỏng hỗ trợ cơ chế đọc và ghi dữ liệu theo từng trang nhớ, đồng thời hỗ trợ tự động tăng địa chỉ sau mỗi lần truyền dữ liệu. Dữ liệu bộ nhớ được lưu trong RAM của vi điều khiển mô phỏng và được khởi tạo mặc định với giá trị \texttt{0xFF}.
+
+Quá trình kiểm thử được thực hiện bằng cách ghi dữ liệu từ DUT đến EEPROM mô phỏng, sau đó đọc lại dữ liệu tại cùng địa chỉ để đối chiếu kết quả.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/hil_eeprom_result.png}
+    \caption{Kết quả kiểm thử EEPROM I2C mô phỏng}
+    \label{fig:hil_eeprom_result}
+\end{figure}
+
+Kết quả kiểm thử cho thấy thiết bị EEPROM mô phỏng hoạt động ổn định, dữ liệu đọc lại hoàn toàn trùng khớp với dữ liệu đã ghi. Cơ chế chuyển đổi thiết bị theo địa chỉ I2C cũng hoạt động chính xác khi có nhiều EEPROM cùng tồn tại trên bus.
+
+\subsubsection{Kết quả mô phỏng I2C RTC}
+
+Thiết bị RTC mô phỏng được xây dựng theo cơ chế thanh ghi thời gian tương tự DS1307, hỗ trợ lưu trữ giây, phút, giờ, ngày, tháng và năm theo định dạng BCD. Thời gian được cập nhật định kỳ thông qua bộ định thời của vi điều khiển.
+
+Quá trình kiểm thử được thực hiện bằng cách thiết lập thời gian từ DUT, sau đó đọc lại dữ liệu thời gian từ RTC mô phỏng để so sánh.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm thử RTC I2C mô phỏng}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Thời gian thiết lập} & \textbf{Thời gian đọc sau 5s} & \textbf{Thời gian mong đợi} & \textbf{Kết quả} \\ \hline
+12:30:15 & 12:30:20 & 12:30:20 & Đạt \\ \hline
+08:45:59 & 08:46:04 & 08:46:04 & Đạt \\ \hline
+23:59:58 & 00:00:03 & 00:00:03 & Đạt \\ \hline
+31/12/25 23:59:58 & 01/01/26 00:00:03 & 01/01/26 00:00:03 & Đạt \\ \hline
+28/02/24 23:59:58 & 29/02/24 00:00:03 & 29/02/24 00:00:03 & Đạt \\ \hline
+30/04/26 23:59:58 & 01/05/26 00:00:03 & 01/05/26 00:00:03 & Đạt \\ \hline
+\end{tabular}
+\end{table}
+
+Kết quả cho thấy RTC mô phỏng có khả năng lưu trữ và cập nhật thời gian chính xác, đồng thời phản hồi đúng dữ liệu khi DUT thực hiện thao tác đọc thanh ghi thời gian thông qua giao tiếp I2C.
+
+\subsubsection{Kết quả mô phỏng SPI Flash}
+
+Thiết bị Flash SPI mô phỏng hỗ trợ các lệnh cơ bản gồm đọc mã định danh thiết bị, đọc dữ liệu, ghi dữ liệu theo trang và xóa toàn bộ bộ nhớ. Dữ liệu bộ nhớ được lưu trực tiếp trong vùng nhớ RAM của hệ thống mô phỏng.
+
+Quá trình kiểm thử được thực hiện bằng cách ghi dữ liệu vào Flash mô phỏng từ DUT, sau đó đọc lại dữ liệu tại cùng địa chỉ để kiểm tra tính chính xác.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{image/hil_spi_flash_result.png}
+    \caption{Kết quả kiểm thử SPI Flash mô phỏng}
+    \label{fig:hil_spi_flash_result}
+\end{figure}
+
+Kết quả kiểm thử cho thấy Flash SPI mô phỏng có thể phản hồi chính xác các lệnh đọc và ghi từ DUT. Dữ liệu sau khi đọc lại hoàn toàn trùng khớp với dữ liệu đã ghi, đáp ứng yêu cầu mô phỏng bộ nhớ Flash trong hệ thống HIL.
+
+\subsection{Tổng hợp khả năng hỗ trợ ngoại vi của hệ thống HIL}
+\begin{table}[H]
+\centering
+\caption{Các ngoại vi và chân tín hiệu được hỗ trợ trong hệ thống HIL}
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{Ngoại vi} & \textbf{Chức năng} & \textbf{Chân tín hiệu} \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{Digital}} \\
+\hline
+
+Power Control 
+& Điều khiển nguồn của DUT 
+& PE14 \\
+\hline
+
+Power Status Input 
+& Đọc trạng thái nguồn của DUT 
+& PD1 \\
+\hline
+
+BOOT CTRL 
+& Điều khiển chân BOOT0 để nạp firmware cho DUT 
+& PD0 \\
+\hline
+
+GPIO Input 
+& Đọc tín hiệu số từ DUT 
+& PE0 -- PE13 \\
+\hline
+
+GPIO Output 
+& Xuất tín hiệu số điều khiển DUT 
+& PB0 -- PB5, PB10 -- PB15 \\
+\hline
+
+PWM 
+& Xuất tín hiệu PWM điều khiển 
+& PA0, PA1, PA2, PA3 \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{Analog}} \\
+\hline
+
+ADC 
+& Đọc tín hiệu tương tự từ DUT 
+& PC0 \\
+\hline
+
+DAC 
+& Xuất tín hiệu tương tự 
+& PA5 \\
+\hline
+
+Waveform Analog 
+& Phát tín hiệu dạng sóng sin và tam giác 
+& PA4 \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{Communication}} \\
+\hline
+
+USART2 
+& Giao tiếp UART 
+& PD5 (TX), PD6 (RX) \\
+\hline
+
+CAN1 
+& Giao tiếp CAN bus 
+& PB9 (TX), PB8 (RX) \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{Device Emulation}} \\
+\hline
+
+I2C1 
+& Mô phỏng I2C EEPROM và I2C RTC 
+& PB6 (SCL), PB7 (SDA) \\
+\hline
+
+SPI3 
+& Mô phỏng SPI Flash 
+& PC10 (SCK), PC11 (MISO), PC12 (MOSI), PA15 (NSS) \\
+\hline
+
+\end{tabularx}
+
+\label{tab:hil_peripherals_pins}
+\end{table}
+
+
+\subsection{Danh sách các lệnh được hỗ trợ bởi hệ thống HIL Generator}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{longtable}{|c|p{4.8cm}|p{7.2cm}|}
+\caption{Danh sách các lệnh được hỗ trợ bởi hệ thống HIL Generator}
+\label{tab:hil_command_list} \\
+
+\hline
+\textbf{STT} & \textbf{Cú pháp lệnh} & \textbf{Mô tả chức năng} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{STT} & \textbf{Cú pháp lệnh} & \textbf{Mô tả chức năng} \\
+\hline
+\endhead
+
+\multicolumn{3}{|c|}{\textbf{Lệnh hệ thống}} \\
+\hline
+
+1
+& \texttt{help}
+& Hiển thị danh sách các lệnh được hỗ trợ trong hệ thống HIL Generator. \\
+\hline
+
+2
+& \texttt{cls}
+& Xóa màn hình console. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{Lệnh điều khiển DUT}} \\
+\hline
+
+3
+& \texttt{dut\_power <0|1>}
+& Bật hoặc tắt nguồn DUT. \\
+\hline
+
+4
+& \texttt{dut\_power\_status}
+& Kiểm tra trạng thái nguồn DUT. \\
+\hline
+
+5
+& \texttt{dut\_boot0\_set <0|1>}
+& Thiết lập trạng thái chân BOOT0 của DUT. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{SPI Flash}} \\
+\hline
+
+6
+& \texttt{w25q\_prepare\_mem <length>}
+& Chuẩn bị vùng nhớ Flash SPI với kích thước chỉ định. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{I2C EEPROM}} \\
+\hline
+
+7
+& \texttt{i2c\_dev\_active <addr>}
+& Kích hoạt thiết bị có địa chỉ <addr> trên bus I2C. \\
+\hline
+
+8
+& \texttt{eeprom\_init <addr> <mem\_size> <page\_size>}
+& Khởi tạo bộ mô phỏng EEPROM I2C có địa chỉ <addr>, kích thước <mem\_size> và kích thước trang <page\_size>. \\
+\hline
+
+9
+& \texttt{eeprom\_deinit <addr>}
+& Hủy khởi tạo bộ mô phỏng EEPROM I2C có địa chỉ <addr>. \\
+\hline
+
+10
+& \texttt{eeprom\_find <addr>}
+& Tìm kiếm thông tin EEPROM có địa chỉ <addr>. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{I2C RTC}} \\
+\hline
+
+11
+& \texttt{rtc\_init <addr>}
+& Khởi tạo bộ mô phỏng RTC I2C có địa chỉ <addr>. \\
+\hline
+
+12
+& \texttt{rtc\_deinit <addr>}
+& Hủy khởi tạo bộ mô phỏng RTC I2C có địa chỉ <addr>. \\
+\hline
+
+13
+& \texttt{rtc\_set\_time <addr> <hour> <min> <sec>}
+& Thiết lập thời gian RTC. \\
+\hline
+
+14
+& \texttt{rtc\_set\_date <addr> <day> <date> <mon> <year>}
+& Thiết lập ngày tháng RTC. \\
+\hline
+
+15
+& \texttt{rtc\_get\_time <addr>}
+& Đọc thời gian RTC. \\
+\hline
+
+16
+& \texttt{rtc\_get\_date <addr>}
+& Đọc ngày tháng RTC. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{CAN}} \\
+\hline
+
+17
+& \texttt{can\_send\_buffer}
+& Gửi 256 byte dữ liệu qua CAN. \\
+\hline
+
+18
+& \texttt{can\_send\_string <text>}
+& Gửi chuỗi dữ liệu qua CAN. \\
+\hline
+
+19
+& \texttt{can\_read}
+& Đọc dữ liệu nhận từ CAN. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{UART}} \\
+\hline
+
+20
+& \texttt{uart\_init}
+& Khởi tạo UART RX interrupt. \\
+\hline
+
+21
+& \texttt{uart\_dump}
+& Gửi 256 byte dữ liệu tăng dần qua UART. \\
+\hline
+
+22
+& \texttt{uart\_rx}
+& Đọc dữ liệu nhận từ UART. \\
+\hline
+
+23
+& \texttt{uart\_tx <text>}
+& Gửi chuỗi dữ liệu qua UART. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{ADC/DAC}} \\
+\hline
+
+24
+& \texttt{adc\_read}
+& Đọc giá trị ADC. \\
+\hline
+
+25
+& \texttt{dac\_set\_voltage <X.Y>}
+& Thiết lập điện áp DAC trong khoảng 0.0V đến 3.3V. \\
+\hline
+
+26
+& \texttt{set\_freq <freq>}
+& Thiết lập tần số sóng sine. \\
+\hline
+
+27
+& \texttt{get\_freq}
+& Đọc tần số sóng sine hiện tại. \\
+\hline
+
+28
+& \texttt{sine\_wave <status>}
+& Bật hoặc tắt chế độ phát sóng sine. \\
+\hline
+
+29
+& \texttt{triangle\_wave <status>}
+& Bật hoặc tắt chế độ phát sóng tam giác. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{PWM}} \\
+\hline
+
+30
+& \texttt{pwm\_start <ch>}
+& Khởi động PWM tại kênh chỉ định. \\
+\hline
+
+31
+& \texttt{pwm\_stop <ch>}
+& Dừng PWM tại kênh chỉ định. \\
+\hline
+
+32
+& \texttt{pwm\_set\_freq <freq\_hz>}
+& Thiết lập tần số PWM. \\
+\hline
+
+33
+& \texttt{pwm\_set\_duty\_cycle <ch> <duty>}
+& Thiết lập duty cycle PWM tại kênh <ch>. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{GPIO}} \\
+\hline
+
+34
+& \texttt{gpio\_list}
+& Hiển thị danh sách GPIO khả dụng và trạng thái của chúng. \\
+\hline
+
+35
+& \texttt{gpio\_write <port> <pin> <0|1>}
+& Ghi mức logic ra chân GPIO. \\
+\hline
+
+36
+& \texttt{gpio\_read <port> <pin>}
+& Đọc trạng thái chân GPIO. \\
+\hline
+
+\end{longtable}
+
+\section{Kết quả thực hiện phần mềm HIL Collector}
+Như đã trình bày trong mục \ref{subsec:la_process_data} (\nameref{subsec:la_process_data}), khối HIL Collector hỗ trợ tối đa 7 kênh digital và 1 kênh analog để thu thập tín hiệu.
+Bên cạnh đó, hệ thống được thiết kế với tốc độ lấy mẫu tối đa 300 kHz nhằm đảm bảo dữ liệu được thu thập và truyền đi liên tục, hạn chế tình trạng mất mẫu hoặc dữ liệu bị ghi đè trong quá trình xử lý và truyền nhận.
+
+\begin{table}[H]
+\centering
+\caption{Các ngoại vi và chân tín hiệu trong khối HIL Collector}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{|l|c|X|} 
+\hline
+\textbf{Tín hiệu} & \textbf{Mô tả} & \textbf{Chân tín hiệu}\\ 
+\hline
+Digital Channel & Thu thập tín hiệu số từ DUT & GPIO2 -- 8\\ 
+\hline
+Analog Channel & Thu thập tín hiệu analog từ DUT & GPIO26\\
+\hline
+UART & Debug UART & GPIO0 (TX), GPIO1 (RX)\\
+\hline
+\end{tabularx}
+\label{tab:logic_analyzer_pins}
+\end{table}
+
+Dữ liệu được truyền từ HIL Collector lên máy tính chỉ là các mẫu dữ liệu thô, chưa thể trực tiếp sử dụng để quan sát và phân tích tín hiệu.
+Vì vậy, hệ thống cần thực hiện quá trình xử lý và chuyển đổi dữ liệu nhằm tái tạo lại dạng sóng tương ứng của các tín hiệu thu thập được.
+Kết quả phía dưới sẽ sử dụng phần mềm mà nhóm thiết kế để có thể hiển thị dạng sóng trực quan.
+
+Sử dụng các tín hiệu (sine, tam giác, pwm) đã đo bằng oscilloscope ở các Hình: \ref{fig:dac_sine_wave}, \ref{fig:dac_triangle_wave}, \ref{fig:pwm_waveform_30}, \ref{fig:pwm_waveform_65} để kiểm tra kết quả của HIL Collector.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/app_sine_wave.jpg}
+    \caption{Sóng sine hiển thị trên phần mềm}
+    \label{fig:app_sine_wave}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/app_triangle_wave.jpg}
+    \caption{Sóng tam giác hiển thị trên phần mềm}
+    \label{fig:app_triangle_wave}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/app_pwm_30.jpg}
+    \caption{PWM với tần số 200Hz, duty cycle 30\%}
+    \label{fig:app_pwm_30}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/app_pwm_65.jpg}
+    \caption{PWM với tần số 200Hz, duty cycle 65\%}
+    \label{fig:app_pwm_65}
+\end{figure}
+Kết quả thu được cho thấy đối với các tín hiệu digital, HIL Collector có kết quả chính xác hơn đo bằng oscilloscope.
+Nguyên nhân do phần mềm đo tần số và độ rộng xung dựa trên các mẫu tín hiệu số nên các thông số này chính xác hơn.
+Với sóng sine, $V_{pp}$ đo được là 3.2V, sai số khoảng 4\% so với 3.33V đo được trên oscilloscope.
+Với sóng tam giác, $V_{pp}$ đo được là 3.22V, sai số khoảng 4.7\%. Sai số này đến từ việc dịch bit của tín hiệu analog.
+Sai số nhỏ hơn 5\% cho thấy HIL Collector vẫn hoạt động ổn định để thực hiện các bài kiểm thử cho DUT. 
+
+\section{Kết quả thực hiện phần mềm trên máy tính}
+Giao diện chính của phần mềm được tổ chức dưới dạng các tab riêng biệt nhằm tăng tính trực quan và thuận tiện trong quá trình sử dụng, bao gồm:
+\begin{itemize}
+    \item \textbf{Serial Tab}: Cấu hình các  thông số cho Serial port (cổng COM, baudrate).
+    \item \textbf{Terminal Tab}: Hỗ trợ giao diện dòng lệnh cho người dùng nhập lệnh thủ công.
+    \item \textbf{Generator Tab}: Hỗ trợ người dùng thao tác với các thiết bị ngoại vi khác như PWM, GPIO, DAC,... để kiểm thử DUT.
+    \item \textbf{Collector Tab}: Hiển thị tín hiệu digital, analog giúp người dùng có thể quan sát và phân tích các tín hiệu như tần số, dạng sóng,...
+\end{itemize}
+
+\clearpage
+\begin{sidewaysfigure}
+    \centering
+    \includegraphics[width=\textheight]{image/PC_GUI.png}
+    \caption{Giao diện chính của phần mềm trên máy tính}
+    \label{fig:PC_GUI}
+\end{sidewaysfigure}
+\clearpage
+
+\subsection{Kết quả điều khiển nguồn cho DUT}
+Người dùng sẽ được cung cấp các nút nhấn trên giao diện để điều khiển nguồn cho DUT.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/power_on.png}
+    \caption{Bật nguồn DUT}
+    \label{fig:power_on}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/power_off.png}
+    \caption{Tắt nguồn DUT}
+    \label{fig:power_off}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/power_app.jpg}
+    \caption{Trạng thái nguồn của DUT trong giao diện dòng lệnh}
+    \label{fig:power_app}
+\end{figure}
+\textbf{Nhận xét:} Dựa trên các kết quả từ giao diện UI và giao diện dòng lệnh, có thể thấy nguồn của DUT đã được bật/tắt và trạng thái nguồn được cập nhật qua led trên phần mềm.
+
+\subsection{Kết quả giao diện Generator Tab}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/app_per_pwm_wave.jpg}
+    \caption{Điều khiển PWM và Waveform generator bằng phần mềm}
+    \label{fig:app_per_pwm_wave}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{image/app_per_gpio_result.jpg}
+    \caption{Điều khiển đọc/ghi GPIO bằng phần mềm}
+    \label{fig:app_per_gpio_result}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/app_per_dac_result.jpg}
+    \caption{Điều khiển DAC Output (Potentiometer) bằng phần mềm}
+    \label{fig:app_per_dac_result}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{image/app_per_can_result.jpg}
+    \caption{Điều khiển CAN bằng phần mềm}
+    \label{fig:app_per_can_result}
+\end{figure}
+\textbf{Nhận xét:} Các khối điều khiển tạo tín hiệu trên phần mềm đã hoạt động đúng với thiết kế, hỗ trợ người dùng dử dụng những ngoại vi cần thiết cho quá tình kiểm thử cho thiết bị DUT.
+
+\subsection{Kết quả giao diện Collector Tab}
+\begin{figure}[H]
+    \centering
+    \includegraphics[angle=90, width=0.8\textwidth]{image/app_la_result.jpg}
+    \caption{Collector thu thập dữ liệu và hiển thị lên giao diện}
+    \label{fig:app_la_result}
+\end{figure}
+\textbf{Nhận xét:} Phần mềm đã thu thập dữ liệu từ HIL Collector sau đó vẽ lại dạng sóng tương ứng với các kênh tín hiệu.
+Đối với kênh digital đã đo được tần số và độ rộng xung. Đối với kênh analog, đã đo được tần số, $V_{pp}$ và điện áp tại vị trí con trỏ.
+
+\section{Kết quả thực hiện phần mềm kiểm thử tự động trên máy tính}
+
+\subsection{Tổ chức thư mục}
+Để thuận tiện cho việc phát triển, mở rộng và bảo trì hệ thống kiểm thử tự động, cấu trúc thư mục của dự án được tổ chức theo hướng phân tách rõ ràng giữa các thành phần kiểm thử, thư viện keyword, tài nguyên dùng chung và kết quả thực thi. 
+
+Hệ thống kiểm thử được xây dựng dựa trên Robot Framework kết hợp với các thư viện Python nhằm hỗ trợ giao tiếp với HIL Generator và HIL Collector. Cấu trúc thư mục tổng quát của hệ thống được trình bày như Hình \ref{fig:robot_folder_structure}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/robot_folder_structure.png}
+    \caption{Cấu trúc thư mục tổng quát của hệ thống}
+    \label{fig:robot_folder_structure}
+\end{figure}
+
+Trong đó, các thư mục chính của hệ thống HIL bao gồm:
+
+\begin{itemize}
+    \item \textbf{hil\_logs/}: Ghi lại các log chi tiết của quá trình giao tiếp giữa Robot Framework với hệ thống HIL, bao gồm các lệnh đã gửi, phản hồi nhận được và trạng thái hoạt động của HIL trong suốt quá trình kiểm thử mỗi lần chạy.
+    \item \textbf{libraries/}: Chứa các tập tin định nghĩa keyword dùng chung trong Robot Framework. Các keyword này được sử dụng để xây dựng các bước kiểm thử ở mức cao, giúp test case trở nên trực quan và thân thiện với người dùng hơn. Các thư viện này cũng đóng vai trò là lớp giao tiếp trung gian giữa Robot Framework với hệ thống HIL Generator và HIL Collector, giúp ẩn đi các chi tiết mức thấp và cung cấp các thao tác đơn giản để điều khiển hệ thống.
+    \item \textbf{resources/}: Chứa các tài nguyên dùng chung như biến cấu hình, thông số giao tiếp,... cho HIL, được sử dụng trong nhiều bài kiểm thử khác nhau.
+    \item \textbf{results/}: Chứa kết quả sau khi thực hiện kiểm thử bao gồm file báo cáo tổng hợp, file log chi tiết và các dữ liệu phục vụ cho việc đánh giá kết quả kiểm thử.
+    \item \textbf{tests/}: Chứa các tập tin kiểm thử được xây dựng bằng Robot Framework. Hệ thống hiện đã cung cấp sẵn các bài kiểm thử mẫu cho các ngoại vi và thiết bị mô phỏng được hỗ trợ trên HIL nhằm giúp người dùng tham khảo và phát triển thêm các kịch bản kiểm thử mới.
+
+\end{itemize}
+
+Các thư mục do người dùng tạo ra bao gồm:
+
+\begin{itemize}
+    \item \textbf{user\_lib/}: Chứa các tập tin định nghĩa keyword do người dùng tự định nghĩa để giao tiếp với hệ thống DUT.
+    \item \textbf{user\_resources/}: Chứa các tài nguyên dùng chung như biến cấu hình, thông số giao tiếp,... cho DUT, được sử dụng trong nhiều bài kiểm thử khác nhau.
+
+\end{itemize}
+
+Với cách tổ chức này, các thành phần trong hệ thống được phân tách rõ ràng giữa phần kiểm thử, phần xử lý giao tiếp phần cứng và phần kết quả đầu ra. Điều này giúp việc phát triển thêm các bài kiểm thử mới, mở rộng hỗ trợ cho các ngoại vi khác cũng như tái sử dụng framework cho nhiều DUT khác nhau trở nên thuận tiện hơn.
+
+\subsection{Các keyword hỗ trợ trong hệ thống kiểm thử}
+
+Các keyword được xây dựng trong hệ thống kiểm thử tự động đóng vai trò là lớp giao tiếp trung gian giữa Robot Framework với hệ thống HIL Generator và HIL Collector. Thay vì thao tác trực tiếp với các lệnh điều khiển mức thấp, người phát triển chỉ cần sử dụng các keyword tương ứng để xây dựng các test case theo dạng mô tả hành vi kiểm thử.
+
+Bảng \ref{tab:hil_keywords} và Bảng \ref{tab:la_keywords} trình bày các keyword tiêu biểu được hỗ trợ trong hệ thống kiểm thử.
+\renewcommand{\arraystretch}{1.3}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{longtable}{|c|p{4.8cm}|p{7.8cm}|}
+\caption{Các keyword hỗ trợ bởi thư viện HIL Generator}
+\label{tab:hil_keywords} \\
+
+\hline
+\textbf{STT} & \textbf{Keyword} & \textbf{Chức năng} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{STT} & \textbf{Keyword} & \textbf{Chức năng} \\
+\hline
+\endhead
+
+\multicolumn{3}{|c|}{\textbf{Kết nối và điều khiển DUT}} \\
+\hline
+
+1 & Connect HIL
+& Thiết lập kết nối giữa PC và hệ thống HIL thông qua USB serial. \\
+\hline
+
+2 & Disconnect HIL
+& Ngắt kết nối giữa PC và hệ thống HIL. \\
+\hline
+
+3 & Verify HIL Alive
+& Kiểm tra khả năng phản hồi và trạng thái hoạt động của HIL. \\
+\hline
+
+4 & HIL Power DUT On
+& Cấp nguồn cho DUT thông qua HIL. \\
+\hline
+
+5 & HIL Power DUT Off
+& Ngắt nguồn DUT thông qua HIL. \\
+\hline
+
+6 & HIL Power DUT Cycle
+& Thực hiện reset nguồn DUT bằng cách tắt và cấp nguồn lại. \\
+\hline
+
+7 & HIL Flash Firmware for DUT
+& Nạp firmware cho DUT thông qua chế độ DFU sử dụng STM32CubeProgrammer CLI. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{GPIO}} \\
+\hline
+
+8 & HIL Set GPIO
+& Thiết lập trạng thái logic cho chân GPIO mô phỏng. \\
+\hline
+
+9 & HIL Read GPIO
+& Đọc trạng thái logic của chân GPIO từ DUT. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{UART}} \\
+\hline
+
+10 & HIL Init UART
+& Khởi tạo giao tiếp UART trên HIL. \\
+\hline
+
+11 & HIL Send UART String
+& Gửi chuỗi dữ liệu UART đến DUT. \\
+\hline
+
+12 & HIL Read UART Data
+& Đọc dữ liệu UART phản hồi từ DUT. \\
+\hline
+
+13 & HIL Verify UART String
+& Kiểm tra tính đúng đắn của chuỗi UART nhận được. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{CAN}} \\
+\hline
+
+14 & HIL Send CAN Buffer
+& Gửi dữ liệu CAN dạng buffer đến DUT. \\
+\hline
+
+15 & HIL Send CAN String
+& Gửi chuỗi dữ liệu thông qua giao tiếp CAN. \\
+\hline
+
+16 & HIL Read CAN Data
+& Đọc dữ liệu phản hồi từ giao tiếp CAN. \\
+\hline
+
+17 & HIL Verify CAN String Data
+& Kiểm tra tính đúng đắn của chuỗi dữ liệu CAN nhận được. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{I2C EEPROM}} \\
+\hline
+
+18 & HIL Init EEPROM
+& Khởi tạo EEPROM mô phỏng trên bus I2C. \\
+\hline
+
+19 & HIL Deinit EEPROM
+& Giải phóng EEPROM mô phỏng khỏi hệ thống HIL. \\
+\hline
+
+20 & HIL Find EEPROM
+& Kiểm tra sự tồn tại của EEPROM trên bus I2C. \\
+\hline
+
+21 & HIL Activate I2C Device
+& Kích hoạt thiết bị I2C mô phỏng trên HIL. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{I2C RTC}} \\
+\hline
+
+22 & HIL Init RTC
+& Khởi tạo RTC mô phỏng trên bus I2C. \\
+\hline
+
+23 & HIL Prepare RTC Time
+& Thiết lập thời gian cho RTC mô phỏng. \\
+\hline
+
+24 & HIL Get RTC Time
+& Đọc giá trị thời gian hiện tại từ RTC mô phỏng. \\
+\hline
+
+25 & HIL Set RTC Date
+& Thiết lập ngày tháng cho RTC mô phỏng. \\
+\hline
+
+26 & HIL Get RTC Date
+& Đọc ngày tháng hiện tại từ RTC mô phỏng. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{SPI Flash}} \\
+\hline
+
+27 & HIL Prepare SPI Flash Data
+& Chuẩn bị dữ liệu mẫu trong SPI Flash để DUT thực hiện đọc dữ liệu. \\
+\hline
+
+\multicolumn{3}{|c|}{\textbf{ADC/DAC}} \\
+\hline
+
+28 & HIL Read ADC Voltage
+& Đọc giá trị điện áp ADC đo được từ HIL. \\
+\hline
+
+29 & HIL Set DAC Voltage
+& Thiết lập điện áp DAC đầu ra của HIL. \\
+\hline
+
+30 & HIL Generate Sine Wave
+& Tạo tín hiệu sóng sine phục vụ kiểm thử DAC hoặc ADC. \\
+\hline
+
+31 & HIL Stop Sine Wave
+& Dừng phát tín hiệu sóng sine. \\
+\hline
+
+32 & HIL Generate Triangle Wave
+& Tạo tín hiệu tam giác phục vụ kiểm thử DAC hoặc ADC. \\
+\hline
+
+33 & HIL Stop Triangle Wave
+& Dừng phát tín hiệu tam giác. \\
+\hline
+
+\end{longtable}
+
+\begin{table}[H]
+\centering
+\caption{Các keyword hỗ trợ bởi thư viện HIL Collector}
+\label{tab:la_keywords}
+
+\begin{tabular}{|c|p{5cm}|p{7.5cm}|}
+\hline
+\textbf{STT} & \textbf{Keyword} & \textbf{Chức năng} \\
+\hline
+
+1
+& Connect Logic Analyzer
+& Thiết lập kết nối với Logic Analyzer thông qua USB serial. \\
+\hline
+
+2
+& Disconnect Logic Analyzer
+& Ngắt kết nối với Logic Analyzer. \\
+\hline
+
+3
+& LA Read Data
+& Thu thập dữ liệu tín hiệu từ Logic Analyzer. \\
+\hline
+
+4
+& LA Verify Sine Wave
+& Phân tích FFT để xác minh tín hiệu tương tự dạng sóng sine và kiểm tra tần số tín hiệu. \\
+\hline
+
+5
+& LA Verify Pulse Wave
+& Phân tích tín hiệu số nhằm xác định tần số và duty cycle của tín hiệu PWM hoặc sóng vuông. \\
+\hline
+
+6
+& LA Verify Triangle Wave
+& Phân tích phổ hài để xác minh tín hiệu tương tự dạng sóng tam giác. \\
+\hline
+
+\end{tabular}
+\end{table}
+
+\subsection{Ví dụ test case kiểm thử}
+
+Trong Robot Framework, một tập tin kiểm thử được tổ chức thành nhiều thành phần nhằm mô tả tài nguyên sử dụng, biến cấu hình và các bước kiểm thử. Việc tổ chức theo cấu trúc này giúp các bài kiểm thử trở nên trực quan, dễ mở rộng và thuận tiện cho việc tái sử dụng trong nhiều dự án khác nhau.
+
+Để minh họa cho cách xây dựng một bài kiểm thử trong hệ thống, luận văn sử dụng ví dụ kiểm thử chức năng đọc điện áp ADC của DUT thông qua tín hiệu DAC được tạo bởi HIL. Nội dung file kiểm thử được trình bày như Hình \ref{fig:robot_adc_testcase}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/robot_adc_testcase.png}
+    \caption{Ví dụ file kiểm thử ADC bằng Robot Framework}
+    \label{fig:robot_adc_testcase}
+\end{figure}
+
+Trong Robot Framework, phần \textbf{Settings} được sử dụng để khai báo các tài nguyên, thư viện và cấu hình chung cho toàn bộ file kiểm thử. 
+
+Trong ví dụ trên, hai dòng lệnh:
+
+\begin{lstlisting}[language={}]
+Resource    ../resources/HIL_keywords.robot
+Resource    ../user_resources/DUT_keywords.robot
+\end{lstlisting}
+
+được sử dụng để import các tập tin resource chứa các keyword phục vụ cho quá trình kiểm thử.
+
+Trong đó:
+
+\begin{itemize}
+
+    \item \textbf{HIL\_keywords.robot}: Chứa các keyword phục vụ điều khiển hệ thống HIL như điều khiển DAC, GPIO, UART, CAN hoặc các thiết bị mô phỏng ngoại vi.
+
+    \item \textbf{DUT\_keywords.robot}: Chứa các keyword do người dùng xây dựng để giao tiếp và kiểm tra DUT, ví dụ như đọc dữ liệu UART từ DUT hoặc xác minh giá trị ADC mà DUT đo được.
+
+\end{itemize}
+
+Việc tách các keyword thành các file resource riêng giúp tăng khả năng tái sử dụng và giảm sự phụ thuộc trực tiếp giữa các test case với phần xử lý giao tiếp mức thấp.
+
+Ngoài ra, phần \textbf{Settings} còn định nghĩa các bước khởi tạo và giải phóng tài nguyên thông qua \textit{Suite Setup} và \textit{Suite Teardown}.
+
+\begin{itemize}
+
+    \item \textbf{Suite Setup}: Là tập hợp các thao tác được thực hiện một lần trước khi bắt đầu chạy toàn bộ các test case trong file kiểm thử.
+
+\end{itemize}
+
+Trong ví dụ trên, \textit{Suite Setup} thực hiện các bước:
+
+\begin{enumerate}
+
+    \item Thiết lập kết nối giữa máy tính và hệ thống HIL.
+    
+    \item Cấp nguồn cho DUT thông qua HIL.
+    
+    \item Thiết lập kết nối giao tiếp với DUT.
+
+\end{enumerate}
+
+Nhờ đó, toàn bộ môi trường kiểm thử được chuẩn bị tự động trước khi thực hiện các bài kiểm thử.
+
+\begin{itemize}
+
+    \item \textbf{Suite Teardown}: Là tập hợp các thao tác được thực hiện sau khi hoàn thành toàn bộ quá trình kiểm thử nhằm giải phóng tài nguyên và đưa hệ thống về trạng thái an toàn.
+
+\end{itemize}
+
+Trong ví dụ trên, \textit{Suite Teardown} thực hiện đóng kết nối với HIL và DUT sau khi tất cả các test case đã chạy xong.
+
+Phần \textbf{Variables} được sử dụng để khai báo các biến dùng chung trong file kiểm thử. Các giá trị điện áp như 1.5V, 2.0V, 3.0V và 3.3V được lưu dưới dạng biến nhằm giúp việc thay đổi tham số kiểm thử trở nên thuận tiện hơn và tăng khả năng tái sử dụng test case.
+
+Phần \textbf{Test Cases} chứa các kịch bản kiểm thử cụ thể. Mỗi test case trong ví dụ trên thực hiện quy trình kiểm thử ADC của DUT theo các bước:
+
+\begin{enumerate}
+
+    \item HIL phát ra mức điện áp tương ứng thông qua DAC.
+    
+    \item DUT thực hiện đọc giá trị điện áp bằng ADC.
+    
+    \item DUT gửi kết quả đo được về máy tính.
+    
+    \item Keyword kiểm thử thực hiện so sánh giá trị nhận được với giá trị mong đợi để xác định kết quả đạt hoặc không đạt.
+
+\end{enumerate}
+
+\subsection{Quy trình thực hiện kiểm thử tự động}
+\subsubsection{Thực hiện một bài kiểm thử}
+
+Đối với một bài kiểm thử đơn lẻ, người dùng có thể thực hiện chạy trực tiếp file test case bằng lệnh Robot Framework tương ứng.
+
+Ví dụ:
+
+\begin{lstlisting}[language=bash]
+robot -d results .\tests\05__analog_test.robot
+\end{lstlisting}
+
+Sau khi thực thi lệnh, Robot Framework sẽ tự động:
+
+\begin{itemize}
+
+    \item Phân tích file kiểm thử.
+    
+    \item Import các resource và keyword cần thiết.
+    
+    \item Thực hiện các bước trong \textit{Suite Setup}.
+    
+    \item Chạy lần lượt các test case trong file.
+    
+    \item Đánh giá kết quả đạt hoặc không đạt.
+    
+    \item Thực hiện \textit{Suite Teardown}.
+    
+    \item Sinh báo cáo kiểm thử sau khi hoàn thành.
+
+\end{itemize}
+
+Trong quá trình thực hiện, trạng thái của từng test case sẽ được hiển thị trực tiếp trên terminal nhằm hỗ trợ người dùng theo dõi tiến trình kiểm thử.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{image/robot_terminal.png}
+    \caption{Trạng thái thực hiện kiểm thử được hiển thị trên terminal}
+    \label{fig:robot_terminal}
+\end{figure}
+
+\subsubsection{Thực hiện nhiều bài kiểm thử liên tiếp}
+
+Ngoài việc thực hiện một bài kiểm thử đơn lẻ, hệ thống còn hỗ trợ chạy nhiều file kiểm thử liên tiếp nhằm phục vụ cho kiểm thử hồi quy firmware.
+
+Người dùng có thể thực hiện kiểm thử toàn bộ thư mục chứa các test case bằng lệnh:
+
+\begin{lstlisting}[language=bash]
+robot -d results .\tests\
+\end{lstlisting}
+
+Khi đó, Robot Framework sẽ tự động tìm kiếm tất cả các file kiểm thử trong thư mục \textit{tests/} và thực hiện tuần tự từng bài kiểm thử.
+
+Cơ chế này cho phép:
+
+\begin{itemize}
+
+    \item Kiểm thử đồng thời nhiều chức năng của DUT.
+    
+    \item Tự động hóa quá trình kiểm thử firmware sau mỗi lần cập nhật.
+    
+    \item Giảm thời gian thao tác thủ công của người phát triển.
+    
+    \item Hỗ trợ kiểm thử hồi quy nhằm phát hiện lỗi phát sinh sau khi thay đổi firmware.
+
+\end{itemize}
+
+Sau khi hoàn thành, Robot Framework sẽ tự động tổng hợp kết quả của toàn bộ các bài kiểm thử và sinh báo cáo thống kê tổng quát.
+
+\subsubsection{Thiết lập thứ tự thực hiện các bài kiểm thử}
+
+Trong một số trường hợp, các bài kiểm thử cần được thực hiện theo một trình tự xác định nhằm đảm bảo trạng thái hoạt động phù hợp của DUT hoặc phục vụ cho quá trình kiểm thử hồi quy.
+
+Để hỗ trợ điều này, hệ thống cho phép người dùng tổ chức thứ tự thực hiện test case theo nhiều phương pháp khác nhau.
+
+Một phương pháp đơn giản là sử dụng tiền tố số thứ tự (\textit{numeric prefix}) trong tên file kiểm thử. Ví dụ:
+
+\begin{lstlisting}[language={}]
+tests/
+|-- 01_gpio.robot
+|-- 02_adc.robot
+|-- 03_uart.robot
+|-- 04_can.robot
+\end{lstlisting}
+
+Khi thực hiện chạy toàn bộ thư mục kiểm thử, Robot Framework sẽ thực hiện các file theo thứ tự tên file, từ đó đảm bảo đúng trình tự kiểm thử mong muốn.
+
+Ngoài ra, hệ thống cũng hỗ trợ xây dựng một file điều phối kiểm thử dùng để quy định rõ trình tự thực hiện các bài kiểm thử. File này đóng vai trò như một tập kiểm thử tổng hợp (\textit{test suite}) dùng để gọi lần lượt các test case hoặc các nhóm kiểm thử khác nhau.
+
+Phương pháp này phù hợp với các hệ thống có số lượng bài kiểm thử lớn hoặc cần xây dựng các kịch bản kiểm thử chuyên biệt cho từng phiên bản firmware.
+
+Nhờ khả năng tổ chức linh hoạt này, người dùng có thể dễ dàng quản lý quá trình kiểm thử tự động, đồng thời đảm bảo các bài kiểm thử được thực hiện theo đúng trình tự yêu cầu của hệ thống.
+
+\subsection{Kết quả sinh báo cáo}
+
+Sau khi hoàn thành quá trình kiểm thử tự động, Robot Framework sẽ tự động sinh ra các tập tin báo cáo phục vụ cho việc theo dõi, phân tích và đánh giá kết quả kiểm thử.
+
+Các tập tin kết quả được lưu trong thư mục \textit{results/} của hệ thống kiểm thử. Trong đó, các tập tin quan trọng bao gồm:
+
+\begin{itemize}
+
+    \item \textbf{report.html}: Báo cáo tổng hợp kết quả kiểm thử.
+    
+    \item \textbf{log.html}: File log chi tiết quá trình thực hiện từng keyword và test case.
+    
+    \item \textbf{output.xml}: File dữ liệu kết quả ở định dạng XML phục vụ cho việc lưu trữ hoặc tích hợp với các hệ thống CI/CD trong tương lai.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/robot_report_success.png}
+    \caption{Báo cáo kiểm thử khi có ít nhất một test case đạt}
+    \label{fig:robot_report_success}
+\end{figure}
+
+Trong trường hợp tất cả các điều kiện kiểm thử đều thỏa mãn, Robot Framework sẽ đánh dấu trạng thái \textit{PASS} cho từng test case cũng như toàn bộ test suite. Báo cáo đồng thời cung cấp thông tin về:
+
+\begin{itemize}
+    \item Số lượng test case đạt và không đạt.
+    \item Thời gian thực hiện kiểm thử.
+    \item Tỷ lệ thành công của toàn bộ bài kiểm thử.
+    \item Tên các test case đã thực hiện.
+\end{itemize}
+
+Ngược lại, khi xuất hiện lỗi trong quá trình kiểm thử hoặc kết quả đo được không đúng với giá trị mong đợi, Robot Framework sẽ đánh dấu trạng thái \textit{FAIL}. Ví dụ báo cáo khi bài kiểm thử thất bại được trình bày như Hình \ref{fig:robot_report_fail}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/robot_report_fail.png}
+    \caption{Báo cáo kiểm thử khi toàn bộ test case không đạt}
+    \label{fig:robot_report_fail}
+\end{figure}
+
+Thông qua báo cáo này, người phát triển có thể nhanh chóng xác định test case xảy ra lỗi và tiến hành phân tích nguyên nhân.
+
+Ngoài báo cáo tổng hợp, hệ thống còn sinh file \textit{log.html} nhằm ghi lại chi tiết toàn bộ quá trình thực hiện kiểm thử. Nội dung file log được trình bày như Hình \ref{fig:robot_log_file}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/robot_log.png}
+    \caption{File log chi tiết của Robot Framework}
+    \label{fig:robot_log_file}
+\end{figure}
+
+File log cung cấp thông tin chi tiết cho từng bước thực hiện bao gồm:
+
+\begin{itemize}
+    \item Các keyword đã được gọi.
+    \item Tham số đầu vào của keyword.
+    \item Dữ liệu phản hồi từ DUT hoặc HIL.
+    \item Thời gian thực hiện từng bước.
+    \item Thông báo lỗi và nguyên nhân gây lỗi nếu có.
+\end{itemize}
+
+Nhờ đó, người phát triển có thể dễ dàng theo dõi luồng thực thi của hệ thống và hỗ trợ quá trình phân tích lỗi firmware.
+
+Bên cạnh đó, Robot Framework cũng sinh file \textit{output.xml} chứa toàn bộ kết quả kiểm thử ở dạng dữ liệu có cấu trúc. Ví dụ file \textit{output.xml} được trình bày như Hình \ref{fig:robot_output_xml}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/robot_output.png}
+    \caption{File output.xml chứa kết quả kiểm thử}
+    \label{fig:robot_output_xml}
+\end{figure}
+
+File XML này cho phép hệ thống dễ dàng tích hợp với các công cụ xử lý kết quả kiểm thử hoặc các nền tảng tự động hóa khác trong tương lai như hệ thống CI/CD hoặc dashboard giám sát kiểm thử.
+
+\subsubsection{File log giao tiếp HIL}
+
+Ngoài các báo cáo của Robot Framework, hệ thống còn tự động ghi lại toàn bộ quá trình giao tiếp giữa máy tính và HIL thông qua file log serial với định dạng:
+
+\begin{center}
+\textbf{hil\_serial\_<ngày\_giờ>.log}
+\end{center}
+
+File log này lưu lại các lệnh điều khiển đã gửi đến HIL, dữ liệu phản hồi từ firmware cũng như trạng thái hoạt động của các ngoại vi mô phỏng trong suốt quá trình kiểm thử. Các file log này được lưu trong thư mục \textit{hil\_logs/} của hệ thống nhằm hỗ trợ người phát triển theo dõi và phân tích chi tiết quá trình giao tiếp với HIL.
+
+Ví dụ, khi thực hiện kiểm thử CAN, file log sẽ ghi lại quá trình gửi dữ liệu CAN buffer, phản hồi nhận được từ DUT cũng như dữ liệu truyền nhận thực tế trên bus CAN. Tương tự, đối với các bài kiểm thử ADC, UART, GPIO hoặc I2C, file log cũng lưu lại toàn bộ nội dung giao tiếp tương ứng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/hil_serial_log.png}
+    \caption{File log giao tiếp serial giữa Robot Framework và HIL}
+    \label{fig:hil_serial_log}
+\end{figure}
+
+Thông qua file log này, người phát triển có thể kiểm tra chính xác các lệnh đã được gửi xuống HIL cũng như dữ liệu phản hồi thực tế từ hệ thống phần cứng. Điều này đặc biệt hữu ích trong quá trình phân tích lỗi hoặc kiểm tra hoạt động của firmware DUT.
+

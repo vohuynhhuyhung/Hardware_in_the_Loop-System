@@ -1,0 +1,117 @@
+\thispagestyle{empty}
+
+% --- ÉP GIẢM SIZE CHỮ TOÀN BỘ TRANG XUỐNG 1PT ---
+\fontsize{12pt}{14.4pt}\selectfont
+
+% --- Header Quốc hiệu ---
+\noindent
+\begin{table}[!ht]
+\centering
+    \resizebox{\textwidth}{!}
+    {
+        \begin{tabular}{ccc}
+        \textbf{ĐẠI HỌC QUỐC GIA TP.HỒ CHÍ MINH} & & \textbf{CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM} \\
+        \textbf{TRƯỜNG ĐẠI HỌC BÁCH KHOA}        & & \textbf{Độc lập - Tự do - Hạnh phúc}
+        \end{tabular}
+    }
+\end{table}
+
+% --- BẢNG NHIỆM VỤ CHÍNH ---
+\begingroup
+\renewcommand{\arraystretch}{1} 
+
+% Tính toán bù trừ đường kẻ cực kỳ chuẩn xác để không vỡ khung (Dành cho 6 cột)
+\newlength{\spanallbutone}
+\setlength{\spanallbutone}{\dimexpr\textwidth-0.6cm-4\tabcolsep-3\arrayrulewidth\relax}
+
+% Cột Phần hướng dẫn gộp 4 cột cuối. Công thức đã được cân bằng lại tuyệt đối!
+\newlength{\insttask}
+\setlength{\insttask}{\dimexpr\textwidth-0.6cm-1.4cm-5.0cm-8\tabcolsep-5\arrayrulewidth\relax}
+
+\noindent
+% Cột tên ép cứng 5cm để vừa tên Vy, cột X về cuối cùng tự động co giãn
+\begin{tabularx}{\textwidth}{| >{\centering\arraybackslash}p{0.6cm} | p{1.4cm} | p{5.0cm} | p{1.2cm} | p{1.5cm} | p{1cm} | X |}
+\hline
+
+% Hàng 1
+\multicolumn{7}{|@{}c@{}|}{%
+    \begin{tabularx}{\dimexpr\textwidth-2\arrayrulewidth\relax}{ >{\centering\arraybackslash}p{5.5cm} | >{\centering\arraybackslash}X }
+        \vspace{0.05cm}\textbf{KHOA ĐIỆN -- ĐIỆN TỬ}\vspace{0.1cm} & 
+        \vspace{0.05cm}\textbf{\large NHIỆM VỤ ĐỒ ÁN TỐT NGHIỆP}\vspace{0.1cm}
+    \end{tabularx}%
+} \\ \hline
+
+% Hàng 2
+\multicolumn{7}{|c|}{} \\ \hline
+
+% Hàng 3 (Tên được ép cứng 5.0cm nên chữ nằm ngang hàng tuyệt đẹp)
+\multicolumn{2}{|l|}{\textbf{HỌ VÀ TÊN:}} & VE SAMY \newline TRẦN NGUYỄN THẢO VY & \textbf{MSSV:} & 2212901 \newline 2214052 & \textbf{LỚP:} & DD22DVT3 \newline DD22VTN \\ \hline
+
+% Hàng 4 
+\multicolumn{2}{|l|}{\textbf{NGÀNH:}} & \multicolumn{5}{l|}{\textbf{ĐIỆN TỬ - VIỄN THÔNG}} \\ \hline
+
+% Hàng 5
+% \multicolumn{7}{|c|}{} \\ \hline
+
+% Hàng 6 
+\textbf{1.} & \multicolumn{6}{l|}{\textbf{Đầu đề đồ án:}} \\ \hline
+
+% Hàng 7 
+& \multicolumn{6}{c|}{Hệ thống mô phỏng phần cứng trong vòng lặp} \\ \hline
+
+% Hàng 8 
+& \multicolumn{6}{c|}{(Hardware-in-the-Loop System)} \\ \hline
+
+% Hàng 9
+\textbf{2.} & \multicolumn{6}{l|}{\textbf{Nhiệm vụ (yêu cầu về nội dung và số liệu ban đầu):}} \\ \hline
+
+% Hàng 10-14
+- & \multicolumn{6}{p{\spanallbutone}|}{Thiết kế hệ thống HIL (Hardware-in-the-Loop) mô phỏng một số thiết bị ngoại vi và cung cấp các tín hiệu số/tương tự để kiểm thử thiết bị DUT (Device Under Test).} \\ \hline
+- & \multicolumn{6}{p{\spanallbutone}|}{Thiết kế và thi công Hardware cho hệ thống.} \\ \hline
+- & \multicolumn{6}{p{\spanallbutone}|}{Thiết kế và phát triển Firmware cho HIL Generator và HIL Collector, DUT.} \\ \hline
+- & \multicolumn{6}{p{\spanallbutone}|}{Thiết kế và phát triển bộ thư viện cho HIL Generator và HIL Collector dùng Robot Framework để hỗ trợ kiểm thử cho DUT.} \\ \hline
+- & \multicolumn{6}{p{\spanallbutone}|}{Thiết kế và phát triển phần mềm giao diện hiển thị, theo dõi hệ thống.} \\ \hline
+
+% Hàng 14
+\textbf{3.} & \multicolumn{6}{l|}{\textbf{Ngày giao nhiệm vụ đồ án:} Tháng 11 năm 2025} \\ \hline
+
+% Hàng 15 
+\textbf{4.} & \multicolumn{6}{l|}{\textbf{Ngày hoàn thành nhiệm vụ:} Tháng 5 năm 2026} \\ \hline
+
+% Hàng 16 
+\textbf{5.} & \multicolumn{2}{l|}{\textbf{Họ và tên người hướng dẫn:}} & \multicolumn{4}{l|}{\textbf{Phần hướng dẫn:}} \\ \hline
+
+% Hàng 17 
+- & \multicolumn{2}{l|}{ThS. Bùi Quốc Bảo} & \multicolumn{4}{p{\insttask}|}{Thiết kế và thi công phần cứng \newline Phát triển Firmware \newline Phát triển thư viện Robot \newline Phát triển phần mềm} \\ \hline
+
+% Hàng 18
+\multicolumn{7}{|p{\dimexpr\textwidth-2\tabcolsep-2\arrayrulewidth\relax}|}{Nội dung và yêu cầu ĐATN đã được thông qua Chủ trì ngành.} \\ \hline
+
+\end{tabularx}
+\endgroup
+\vspace{-0.3cm}
+
+% --- CHỮ KÝ ---
+\noindent
+\begin{tabularx}{\textwidth}{@{} >{\centering\arraybackslash}X >{\centering\arraybackslash}X @{}}
+    \textit{Ngày \hspace{0.5cm} tháng \hspace{0.5cm} năm } & \\
+    \textbf{CHỦ TRÌ NGÀNH} & \textbf{GIẢNG VIÊN HƯỚNG DẪN CHÍNH} \\
+    \textit{(Ký và ghi rõ họ tên)} & \textit{(Ký và ghi rõ họ tên)}
+\end{tabularx}
+
+\vspace{2cm}
+
+% --- PHẦN DÀNH CHO KHOA ---
+\noindent
+{\small
+\begin{itemize}[leftmargin=0pt, itemsep=-4pt, topsep=0pt, parsep=0pt]
+    \item[] \textbf{PHẦN DÀNH CHO KHOA:}
+    \item[] Người duyệt (chấm sơ bộ):
+    \item[] Đơn vị:
+    \item[] Ngày bảo vệ:
+    \item[] Điểm tổng kết:
+    \item[] Nơi lưu trữ luận án:
+\end{itemize}
+}
+
+\clearpage

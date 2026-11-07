@@ -1,0 +1,10 @@
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:800:26:LL_GPIO_IsInputPinSet	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:852:26:LL_GPIO_IsOutputPinSet	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:881:22:LL_GPIO_SetOutputPin	1
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:910:22:LL_GPIO_ResetOutputPin	1
+../App/EmuDrivers/Src/gpio_control.c:58:13:port_to_char	6
+../App/EmuDrivers/Src/gpio_control.c:68:16:pin_to_number	3
+../App/EmuDrivers/Src/gpio_control.c:78:28:gpio_find	4
+../App/EmuDrivers/Src/gpio_control.c:89:15:gpio_write	4
+../App/EmuDrivers/Src/gpio_control.c:106:15:gpio_read	3
+../App/EmuDrivers/Src/gpio_control.c:122:6:gpio_list_all	4

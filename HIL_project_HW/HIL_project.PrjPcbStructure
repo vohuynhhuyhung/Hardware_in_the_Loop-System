@@ -1,0 +1,5 @@
+Record=TopLevelDocument|FileName=Block_Diagram.SchDoc|SheetNumber=1
+Record=NoMainPathDocument|SourceDocument=Block_Diagram.SchDoc|FileName=DUT.SchDoc|SheetNumber=4
+Record=NoMainPathDocument|SourceDocument=Block_Diagram.SchDoc|FileName=HIL.SchDoc|SheetNumber=2
+Record=NoMainPathDocument|SourceDocument=Block_Diagram.SchDoc|FileName=HIL_Header.SchDoc|SheetNumber=5
+Record=NoMainPathDocument|SourceDocument=Block_Diagram.SchDoc|FileName=Power.SchDoc|SheetNumber=3

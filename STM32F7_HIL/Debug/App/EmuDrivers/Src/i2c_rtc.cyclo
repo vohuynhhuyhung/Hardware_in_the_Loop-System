@@ -1,0 +1,14 @@
+../App/EmuDrivers/Src/i2c_rtc.c:17:16:bcd2bin	1
+../App/EmuDrivers/Src/i2c_rtc.c:18:16:bin2bcd	1
+../App/EmuDrivers/Src/i2c_rtc.c:20:8:rtc_init	1
+../App/EmuDrivers/Src/i2c_rtc.c:42:6:rtc_deinit	1
+../App/EmuDrivers/Src/i2c_rtc.c:48:8:find_rtc	3
+../App/EmuDrivers/Src/i2c_rtc.c:55:6:rtc_set_time	1
+../App/EmuDrivers/Src/i2c_rtc.c:62:6:rtc_set_date	1
+../App/EmuDrivers/Src/i2c_rtc.c:69:6:rtc_get_time	1
+../App/EmuDrivers/Src/i2c_rtc.c:76:6:rtc_get_date	1
+../App/EmuDrivers/Src/i2c_rtc.c:84:6:rtc_tick	7
+../App/EmuDrivers/Src/i2c_rtc.c:108:6:rtc_addr_handler	1
+../App/EmuDrivers/Src/i2c_rtc.c:113:6:rtc_rx_handler	3
+../App/EmuDrivers/Src/i2c_rtc.c:129:6:rtc_tx_handler	2
+../App/EmuDrivers/Src/i2c_rtc.c:138:6:rtc_listen_handler	1

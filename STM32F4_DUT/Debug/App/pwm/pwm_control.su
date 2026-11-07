@@ -1,0 +1,5 @@
+../App/pwm/pwm_control.c:17:5:pwm_start	16	static
+../App/pwm/pwm_control.c:38:5:pwm_stop	16	static
+../App/pwm/pwm_control.c:59:6:set_pwm_freq	56	static
+../App/pwm/pwm_control.c:77:6:set_pwm_voltage	32	static
+../App/pwm/pwm_control.c:102:6:set_pwm_duty_cycle	24	static

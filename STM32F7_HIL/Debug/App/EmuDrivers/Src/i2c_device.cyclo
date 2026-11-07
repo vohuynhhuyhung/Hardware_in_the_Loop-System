@@ -1,0 +1,8 @@
+../App/EmuDrivers/Src/i2c_device.c:18:6:i2c_emu_device_init	2
+../App/EmuDrivers/Src/i2c_device.c:27:6:i2c_emu_add_device	2
+../App/EmuDrivers/Src/i2c_device.c:35:6:i2c_emu_remove_device	2
+../App/EmuDrivers/Src/i2c_device.c:43:5:i2c_set_slave_addr	5
+../App/EmuDrivers/Src/i2c_device.c:69:6:HAL_I2C_AddrCallback	3
+../App/EmuDrivers/Src/i2c_device.c:90:6:HAL_I2C_SlaveRxCpltCallback	4
+../App/EmuDrivers/Src/i2c_device.c:109:6:HAL_I2C_SlaveTxCpltCallback	4
+../App/EmuDrivers/Src/i2c_device.c:128:6:HAL_I2C_ListenCpltCallback	4

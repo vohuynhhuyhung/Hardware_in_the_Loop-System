@@ -1,0 +1,241 @@
+\chapter{THIẾT KẾ VÀ THỰC HIỆN PHẦN CỨNG}
+\section{Yêu cầu thiết kế}
+
+Đối với hệ thống mô phỏng phần cứng trong vòng lặp (HIL), việc thiết kế và thực hiện phần cứng đóng vai trò quan trọng trong việc đảm bảo tính chính xác của mô phỏng.
+Phần cứng cần được thiết kế đầy đủ các ngoại vi để có thể giao tiếp hiệu quả với thiết bị được kiểm thử (DUT).
+Bên cạnh đó cần đảm bảo khả năng vận hành và xử lý dữ liệu chính xác. Các yêu cầu thiết kế cơ bản đối với hệ thống gồm:
+
+\begin{itemize}
+    \item \textbf{Nguồn điện:}
+    Cung cấp nguồn điện ổn định và đủ công suất để đảm bảo hoạt động của HIL, DUT và một số module khác.
+    \item \textbf{Khả năng lưu trữ và xử lý cục bộ:}
+    Hệ thống cần có khả năng lưu trữ dữ liệu tạm thời và xử lý cục bộ để xử lý các tác vụ được yêu cầu từ máy tính trước khi thực hiện mô phỏng.
+    \item \textbf{Giao tiếp:}
+    Hệ thống được trang bị các ngoại vi cần thiết để giao tiếp với DUT và máy tính gồm :
+        \begin{itemize}
+            \item Giao tiếp với DUT: UART, SPI, I2C, CAN, GPIO, TIMER, ADC, DAC.
+            \item Giao tiếp với máy tính: USB.
+        \end{itemize}
+    \item \textbf{Khả năng mở rộng và cập nhật phần mềm:}
+    Hệ thống cần được thiết kế để dễ dàng cập nhật firmware qua chuẩn Serial wire để mở rộng tính năng và đảm bảo khả năng bảo trì lâu dài.
+\end{itemize}
+
+\section{Sơ đồ khối tổng quát}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/hw_block_diagram.jpg}
+    \caption{Sơ đồ khối tổng quát phần cứng của hệ thống}
+    \label{fig:hw_block_diagram}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Khối nguồn:} Cung cấp nguồn điện điện áp và dòng điện ổn định cho toàn bộ hệ thống.
+    \item \textbf{Khối HIL (Generator và Collector):}
+        \begin{itemize}
+            \item \textbf{Generator:} Tập trung giao tiếp, xử lý dữ liệu với DUT bằng cách ngoại vi thông dụng như UART, SPI, I2C, CAN, GPIO, DAC. Tạo các dạng sóng như sóng sine, sóng tam giác, PWM. Đồng thời mô phỏng một số phần cứng phổ biến như EEPROM, Flash, RTC.
+            \item \textbf{Collector:} Tập trung xử lý dữ liệu analog và digital từ DUT, hoạt động như một logic analyzer hoặc oscilloscope và hiển thị dạng sóng lên PC qua giao tiếp USB.
+        \end{itemize}
+    \item \textbf{Khối DUT:} Chạy chương trình thực thi cần kiểm thử.
+    \item \textbf{Khối điều khiển nguồn cho DUT:} Cho phép HIL có thể điều khiển nguồn điện cấp cho DUT và nhận thông tin về trạng thái nguồn từ DUT.
+    \item \textbf{Connector mở rộng:} Cung cấp các connector để kết nối các thiết bị ngoại vi khác nếu cần thiết.
+\end{itemize}
+
+\section{Sơ đồ khối chi tiết}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/hw_detail.jpg}
+    \caption{Sơ đồ khối chi tiết phần cứng của hệ thống}
+    \label{fig:hw_detail}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Khối nguồn:} Nguồn điện được cấp từ jack DC, sau đó hạ áp xuống mức 3.3V.
+    \item \textbf{HIL Generator:} Sử dụng vi điều khiển STM32F407VET6 hoạt động với nguồn 3.3V, có tích hợp các ngoại vi như CAN, DAC, UART, SPI,... phù hợp để mô phỏng các phần cứng và giao tiếp với DUT, PC.
+    \item \textbf{HIL Collector:} Sử dụng module Raspberry Pi Pico, hoạt động với nguồn 3.3V thực hiện các chức năng để thu thâp, xử lý tín hiệu analog và digital từ DUT.
+    \item \textbf{Khối DUT:} Sử dụng module STM32F407VET6 Dev kit, được bán phổ biến trên thị trường, để thực hiện chương trình cần kiểm thử.
+    \item \textbf{Khối giao tiếp CAN:} Sử dụng IC Transciever CAN SN65HVD230DR hoạt động với nguồn 3.3V để thực hiện giao tiếp CAN giữa HIL và DUT.
+\end{itemize}
+
+\section{Sơ đồ mạch chi tiết}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/pcb.jpg}
+    \caption{PCB của hệ thống HIL}
+    \label{fig:pcb}
+\end{figure}
+Những khối chức năng chính trên chính trên hệ thống được thiết kế chi tiết như sau:
+\subsection{Khối nguồn}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{image/source_hil.jpg}
+    \caption{Sơ đồ khối nguồn của HIL}
+    \label{fig:source_hil}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{image/source_dut.jpg}
+    \caption{Sơ đồ khối nguồn của DUT}
+    \label{fig:source_dut}
+\end{figure}
+
+Vì HIL điều khiển nguồn cấp cho DUT nên cần thiết kế hai khối nguồn riêng biệt cho HIL và DUT.
+
+Hệ thống được cấp nguồn với điện áp đầu vào 5V DC qua jack DC và được hạ xuống 3.3V để cung cấp cho khối HIL gồm Generator và Collector và các module khác.\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{image/hw_source_hil.jpg}
+    \caption{Mạch hạ áp cho HIL}
+    \label{fig:hw_source_hil}
+\end{figure}
+
+Nguồn cung cấp cho DUT và các module liên quan cũng được hạ áp từ nguồn 5V đầu vào. Để HIL có thể điều khiển nguồn cho DUT, cần kết hợp mạch hạ áp với khóa điện tử dùng MOSFET.\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{image/hw_source_dut.jpg}
+    \caption{Mạch hạ áp cho DUT}
+    \label{fig:hw_source_dut}
+\end{figure}
+Mạch sử dụng P-Channel MOSFET để HIL điều khiển đóng ngắt nguồn cấp cho DUT. Khi không có tín hiệu điều khiển từ HIL (HIL xuất mức tín hiệu 0), điện áp tại chân G của MOSFET xấp xỉ 5V.
+Lúc này, $V_{GS}$ xấp xỉ 0V nên MOSFET ở trạng thái tắt, nguồn không được cấp cho DUT. Khi HIL xuất mức tín hiệu cao, $Q_2$ dẫn, kéo chân G của MOSFET về mức 0V.
+Lúc này, $V_{GS}$ xấp xỉ -5V < $V_{th}$ nên MOSFET ở trạng thái mở, nguồn được cấp cho DUT.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.32\textwidth]{image/power.jpg}
+    \caption{Khối nguồn thực tế}
+    \label{fig:power}
+\end{figure}
+
+\subsection{Khối HIL Generator}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/hil_block.jpg}
+    \caption{Sơ đồ mạch của HIL Generator}
+    \label{fig:hil_block}
+\end{figure}
+
+Vi điều khiển được sử dụng là STM32F407VET6 có tích hợp nhiều ngoại vi, phù hợp để mô phỏng các phần cứng cho mục đích kiểm thử DUT và giao tiếp với PC.
+
+Mạch bao gồm các tụ lọc nguồn nhằm ổn định điện áp hoạt động cho vi điều khiển. Bên cạnh đó, mạch còn bao gồm các khối cơ bản như DEBUGGER hỗ trợ lập trình và gỡ lỗi,
+khối USB giao tiếp với PC, nút nhấn RESET, thạch anh,...
+
+% \begin{table}[H]
+% \centering
+% \caption{Các ngoại vi và chân tín hiệu trong hệ thống HIL}
+% \renewcommand{\arraystretch}{1.2}
+% \begin{tabularx}{\textwidth}{|l|c|X|} 
+% \hline
+% \textbf{Ngoại vi / Tín hiệu} & \textbf{Chân tín hiệu} & \textbf{Mô tả} \\ 
+% \hline
+% Power Control & PE14 & Điều khiển nguồn của DUT \\ 
+% \hline
+% Power Status Input & PD1 & Đọc trạng thái nguồn của DUT \\ 
+% \hline
+% BOOT CTRL & PD0 & Kích hoạt chế độ Boot 1 để nạp chương trình bằng USB \\ 
+% \hline
+% SPI3 & \parbox[t]{3cm}{\centering PC10 (SCK), PC11 (MISO), PC12 (MOSI), PA15 (NSS) \vspace{2pt}} & Mô phỏng SPI Flash \\ 
+% \hline
+% I2C1 & \parbox[t]{3cm}{\centering PB6 (SCL), PB7 (SDA) \vspace{3pt}} & Mô phỏng I2C EEPROM \\ 
+% \hline
+% USART2 & \parbox[t]{3cm}{\centering PD5 (TX), PD6 (RX) \vspace{3pt}} & Giao tiếp UART \\ 
+% \hline
+% CAN1 & \parbox[t]{3cm}{\centering PB9 (TX), PB8 (RX) \vspace{3pt}} & Giao tiếp CAN bus \\ 
+% \hline
+% PWM & PA1, PA2, PA3 & Xuất tín hiệu PWM điều khiển \\ 
+% \hline
+% DAC & PA5 & Xuất tín hiệu analog (DAC) \\ 
+% \hline
+% Waveform Analog & PA4 & Phát tín hiệu dạng sóng (sin, tam giác) \\ 
+% \hline
+% ADC & PA0 & Đọc tín hiệu analog từ DUT \\ 
+% \hline
+% GPIO Input & PE0 -- PE13 & Đọc tín hiệu số từ DUT \\ 
+% \hline
+% GPIO Output & \parbox[t]{3cm}{\centering PB0 -- PB5, PB10 -- PB15 \vspace{3pt}} & Xuất tín hiệu số điều khiển DUT \\ 
+% \hline
+% \end{tabularx}
+% \label{tab:hil_peripherals_pins}
+% \end{table}
+
+\subsection{Khối HIL Collector}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{image/hw_pi.jpg}
+    \caption{Sơ đồ mạch của HIL Collector}
+    \label{fig:hw_pi}
+\end{figure}
+
+Vi điều khiển được sử dụng là module Rasberry Pi Pico hoạt động như một logic analyzer hoặc oscilloscope, có nhiệm vụ thu thập và xử lý tín hiệu analog, digital từ DUT. Sau đó gửi dữ liệu thu được lên PC qua giao tiếp USB để 
+thực hiện các test case liên quan đến việc xử lý tín hiệu như kiểm tra tần số, độ rộng xung,\dots
+Mạch cũng được bao gồm nút nhấn RESET, debug led, các tụ lọc nguồn nhằm ổn định điện áp hoạt động cho module. \\
+
+% \begin{table}[H]
+% \centering
+% \caption{Các ngoại vi và chân tín hiệu trong hệ thống Logic Analyzer}
+% \renewcommand{\arraystretch}{1.2}
+% \begin{tabularx}{\textwidth}{|l|c|X|} 
+% \hline
+% \textbf{Tín hiệu} & \textbf{Chân tín hiệu} & \textbf{Mô tả} \\ 
+% \hline
+% Digital Channel & GPIO2 -- 8 & Thu thập tín hiệu số từ DUT \\ 
+% \hline
+% Analog Channel & GPIO26 & Thu thập tín hiệu analog từ DUT \\
+% \hline
+% UART & GPIO0 (TX), GPIO1 (RX) & Debug UART \\
+% \hline
+% \end{tabularx}
+% \label{tab:logic_analyzer_pins}
+% \end{table}
+
+\subsection{Khối giao tiếp CAN}
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/can_hil.jpg}
+        \label{fig:can_hil}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/can_dut.jpg}
+        \label{fig:can_dut}
+    \end{minipage}
+    \vspace{-10pt}
+    \caption{Sơ đồ mạch giao tiếp CAN của HIL và DUT}
+\end{figure}
+
+HIL Generator và DUT đều sử dụng giao tiếp CAN để trao đổi dữ liệu. 
+Vì vậy, cần thiết kế mạch giao tiếp CAN sử dụng IC Transciever CAN SN65HVD230DR để chuyển đổi tín hiệu CAN từ mức logic của vi điều khiển sang mức tín hiệu CAN vi sai CANH/CANL.
+
+Tín hiệu từ mỗi vi điều khiển được kết nối với các điện trở hạn dòng 22$\Omega$ giúp ổn định tín hiệu. Bên cạnh đó, hai transciever được kết nối qua cặp dây CANH và CANL với các điện trở matching 120$\Omega$ giúp đảm bảo trở kháng đường truyền và hạn chế phản xạ tín hiệu.
+
+\subsection{Khối giao tiếp chung và các connector mở rộng}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/header_hil.jpg}
+    \caption{Sơ đồ mạch của khối giao tiếp chung của HIL}
+    \label{fig:header_hil}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/header_dut.jpg}
+    \caption{Sơ đồ mạch của khối giao tiếp chung của DUT}
+    \label{fig:header_dut}
+\end{figure}
+
+Với các tín hiệu giao tiếp chung như UART, SPI, I2C cần kết nối với các điện trở hạn dòng 22$\Omega$ để ổn định tín hiệu. 
+Bên cạnh đó, các tín hiệu này được đưa ra các bus connector riêng để dễ dàng kết nối với DUT. Với tín hiệu I2C, cần thêm điện trở kéo lên 3.3V.
+Các ngoại vi còn lại được kết nối với các general connector để mở rộng kết nối với các thiết bị ngoại vi khác trong tương lai nếu cần thiết.\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{image/connector.jpg}
+    \caption{Khối giao tiếp và connector mở rộng thực tế}
+    \label{fig:connector}
+\end{figure}
+% \section{Thiết kế PCB của hệ thống}
+

@@ -1,0 +1,7 @@
+../App/EmuDrivers/Src/uart_driver.c:19:6:HAL_UART_RxCpltCallback	3
+../App/EmuDrivers/Src/uart_driver.c:39:6:UART_Init	1
+../App/EmuDrivers/Src/uart_driver.c:44:10:UART_Available	2
+../App/EmuDrivers/Src/uart_driver.c:53:10:UART_Read	3
+../App/EmuDrivers/Src/uart_driver.c:66:6:UART_Clear	1
+../App/EmuDrivers/Src/uart_driver.c:72:6:UART_Send	1
+../App/EmuDrivers/Src/uart_driver.c:77:6:UART_Send_String	1

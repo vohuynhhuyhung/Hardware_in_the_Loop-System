@@ -1,0 +1,7 @@
+../App/EmuDrivers/Src/i2c_eeprom.c:18:11:find_eeprom	3
+../App/EmuDrivers/Src/i2c_eeprom.c:27:11:eeprom_init	5
+../App/EmuDrivers/Src/i2c_eeprom.c:62:6:eeprom_deinit	4
+../App/EmuDrivers/Src/i2c_eeprom.c:82:6:eeprom_addr_handler	3
+../App/EmuDrivers/Src/i2c_eeprom.c:102:6:eeprom_rx_handler	4
+../App/EmuDrivers/Src/i2c_eeprom.c:131:6:eeprom_tx_handler	2
+../App/EmuDrivers/Src/i2c_eeprom.c:143:6:eeprom_listen_handler	5

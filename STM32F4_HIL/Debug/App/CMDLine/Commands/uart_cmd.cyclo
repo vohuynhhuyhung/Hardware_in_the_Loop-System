@@ -1,0 +1,5 @@
+../App/CMDLine/Commands/uart_cmd.c:14:12:Cmd_UART_Init	3
+../App/CMDLine/Commands/uart_cmd.c:25:12:Cmd_UART_Dump_Buffer	5
+../App/CMDLine/Commands/uart_cmd.c:44:12:Cmd_UART_Receive	6
+../App/CMDLine/Commands/uart_cmd.c:69:12:Cmd_UART_Send_String	3
+../App/CMDLine/Commands/uart_cmd.c:86:6:Cmd_UART_Register	1

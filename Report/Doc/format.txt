@@ -1,0 +1,36 @@
+Bullet:
+\begin{itemize}
+    \item \textbf{Chất liệu (thân cảm biến):}
+    Là một thanh kim loại chịu tải có tính đàn hồi cao, thường được chế tạo từ nhôm hợp kim hoặc thép không gỉ. 
+    Khi có lực tác động, thanh này sẽ bị biến dạng nhẹ.
+    \item \textbf{Strain Gage:}
+    Là điện trở đặc biệt với kích thước nhỏ. 
+    Khi bị kéo dãn hoặc nén lại, điện trở của strain gage sẽ thay đổi tỉ lệ với lực tác động. 
+    Strain gage thường được dán lên thân cảm biến.
+    \item \textbf{Vỏ bọc:}
+    Vỏ bọc bảo vệ các thành phần bên trong khỏi bụi bẩn, độ ẩm và các tác động môi trường khác.
+\end{itemize}
+
+Image:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/INA333.png}
+    \caption{INA333}
+    \label{fig:ina333}
+\end{figure}
+
+Table:
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+Ảnh hưởng nhiệt độ tới độ nhạy \%RO/$^o C$& 0.003\\
+\hline
+Ảnh hưởng nhiệt độ tới điểm không \%RO/$^o C$ & 0.02\\
+\hline
+\end{tabular}
+\caption{Ảnh hưởng nhiệt độ của Load cell}
+\label{tab:loadcell_temp_effect}
+\end{table}
+
+

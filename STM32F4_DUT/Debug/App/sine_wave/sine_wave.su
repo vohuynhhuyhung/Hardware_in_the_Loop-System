@@ -1,0 +1,12 @@
+../App/sine_wave/sine_wave.c:40:6:calc_triangle	16	static
+../App/sine_wave/sine_wave.c:50:6:calcsin	16	static
+../App/sine_wave/sine_wave.c:56:6:is_sine_wave_on	4	static
+../App/sine_wave/sine_wave.c:60:6:is_triangle_wave_on	4	static
+../App/sine_wave/sine_wave.c:64:6:is_freq_set	4	static
+../App/sine_wave/sine_wave.c:68:6:set_flag_sine_wave_on	16	static
+../App/sine_wave/sine_wave.c:72:6:set_flag_triangle_wave_on	16	static
+../App/sine_wave/sine_wave.c:76:6:set_flag_freq_set	16	static
+../App/sine_wave/sine_wave.c:80:6:set_freq	80	static
+../App/sine_wave/sine_wave.c:100:10:get_freq	4	static
+../App/sine_wave/sine_wave.c:104:6:stop_gen_wave	8	static
+../App/sine_wave/sine_wave.c:109:6:start_gen_wave	24	static

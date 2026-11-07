@@ -1,0 +1,4 @@
+../App/CMDLine/Commands/can_cmd.c:16:12:Cmd_CAN_Send_Buffer	16	static
+../App/CMDLine/Commands/can_cmd.c:23:12:Cmd_CAN_Read_Buffer	40	static
+../App/CMDLine/Commands/can_cmd.c:96:12:Cmd_CAN_Send_String	24	static
+../App/CMDLine/Commands/can_cmd.c:110:6:Cmd_CAN_Register	8	static

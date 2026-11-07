@@ -1,0 +1,4 @@
+../App/can_driver/can_driver.c:23:6:CAN_Init	56	static
+../App/can_driver/can_driver.c:47:6:CAN_Send	16	static
+../App/can_driver/can_driver.c:56:6:CAN_SendBuffer	272	static
+../App/can_driver/can_driver.c:68:6:HAL_CAN_RxFifo0MsgPendingCallback	16	static

@@ -1,0 +1,11 @@
+../App/CMDLine/Commands/i2c_cmd.c:17:12:cmd_i2c_dev_active	5
+../App/CMDLine/Commands/i2c_cmd.c:40:12:cmd_i2c_rtc_init	5
+../App/CMDLine/Commands/i2c_cmd.c:65:12:cmd_i2c_rtc_deinit	4
+../App/CMDLine/Commands/i2c_cmd.c:86:12:cmd_i2c_rtc_set_time	3
+../App/CMDLine/Commands/i2c_cmd.c:112:12:cmd_i2c_rtc_set_date	3
+../App/CMDLine/Commands/i2c_cmd.c:138:12:cmd_i2c_rtc_get_time	3
+../App/CMDLine/Commands/i2c_cmd.c:160:12:cmd_i2c_rtc_get_date	3
+../App/CMDLine/Commands/i2c_cmd.c:182:12:cmd_i2c_eeprom_init	5
+../App/CMDLine/Commands/i2c_cmd.c:210:12:cmd_i2c_eeprom_deinit	5
+../App/CMDLine/Commands/i2c_cmd.c:237:12:cmd_i2c_eeprom_find	5
+../App/CMDLine/Commands/i2c_cmd.c:262:6:Cmd_I2C_Register	1
