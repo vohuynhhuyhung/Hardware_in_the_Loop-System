@@ -3,6 +3,8 @@ name: HIL CI
 on:
   schedule:
     - cron: "*/5 * * * *"   # poll registered user repos for new commits
+  repository_dispatch:       # sent by a registered user repo right after a push
+    types: [hil-push]
   workflow_dispatch:
     inputs:
       only:
