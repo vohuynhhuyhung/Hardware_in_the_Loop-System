@@ -1,8 +1,8 @@
 name: HIL CI
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"   # poll registered user repos for new commits
+  # No cron: HIL_ci/watch_registry.py (running on the bench PC) detects new commits.
+  # This workflow now only runs manually or via repository_dispatch.
   repository_dispatch:       # sent by a registered user repo right after a push
     types: [hil-push]
   workflow_dispatch:

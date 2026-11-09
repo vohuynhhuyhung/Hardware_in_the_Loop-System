@@ -32,11 +32,13 @@ def main():
     a = ap.parse_args()
 
     entries = json.loads((CI_DIR / "registry.json").read_text("utf-8")).get("repos", [])
-    state = json.loads(STATE_FILE.read_text("utf-8")) if STATE_FILE.exists() else {}
     any_fail = False
     ran = 0
 
     with hil_lock():
+        # Read the state only AFTER taking the bench lock: another process (watch_registry.py)
+        # may have just tested this commit while we were waiting for the bench.
+        state = json.loads(STATE_FILE.read_text("utf-8")) if STATE_FILE.exists() else {}
         for e in entries:
             if a.only and e["name"] != a.only:
                 continue
