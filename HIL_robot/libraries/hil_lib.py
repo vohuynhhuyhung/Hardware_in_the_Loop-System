@@ -125,37 +125,44 @@ class HILLibrary:
             raise AssertionError("BOOT0 value must be 0 or 1")
         self._hil_cmd(f"dut_boot0_set {value}")
 
-    def _wait_for_dfu_device(self, timeout=20):
+    def _pnp_snapshot(self):
+        """Return 'FriendlyName | InstanceId | Status' lines for all present PnP devices."""
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+             "Get-PnpDevice -PresentOnly | ForEach-Object { $_.FriendlyName + ' | ' + $_.InstanceId + ' | ' + $_.Status }"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return result.stdout or ""
 
+    def _wait_for_dfu_device(self, timeout=20):
+        """True once the STM32 ROM bootloader (VID_0483 & PID_DF11) is present, False on timeout.
+
+        wmic was removed in recent Windows 11, so PnP is queried through PowerShell.
+        """
         start = time.time()
+        out = ""
 
         while time.time() - start < timeout:
+            out = self._pnp_snapshot()
+            low = out.lower()
 
-            # wmic was removed in recent Windows 11; query PnP via PowerShell instead.
-            # STM32 ROM bootloader (DFU) enumerates as VID_0483 & PID_DF11.
-            result = subprocess.run(
-                ["powershell", "-NoProfile", "-NonInteractive", "-Command",
-                 "Get-PnpDevice -PresentOnly | ForEach-Object { $_.FriendlyName + ' ' + $_.InstanceId }"],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-            )
-
-            out = (result.stdout or "").lower()
-
-            if "pid_df11" in out or "stm32 bootloader" in out:
+            if "pid_df11" in low or "stm32 bootloader" in low:
                 logger.info("STM32 DFU device detected")
-                return
+                return True
 
-            time.sleep(4)
+            time.sleep(2)
 
-        # Nếu không thể tìm thấy device, cần thoát BOOT mode 1 reset lại DUT trước khi báo lỗi
-        self.set_dut_boot0(0)
-        BuiltIn().sleep(0.5)
-        self.power_dut_cycle()
-        raise AssertionError("STM32 DFU device not detected")
-    
+        # Help debugging: list USB devices Windows could not identify / the ST ones
+        suspects = [l for l in out.splitlines()
+                    if "vid_0483" in l.lower() or "unknown" in l.lower()
+                    or "vid_0000" in l.lower() or l.strip().endswith("| Error")]
+        details = "\n".join(suspects) or "(none)"
+        logger.warn(f"DFU device not detected. Related PnP entries:\n{details}")
+        return False
+
     def _flash_via_stm32_cli(self, fw_path):
 
         cli_path = r"D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
@@ -199,15 +206,23 @@ class HILLibrary:
         
         logger.info("Entering DFU mode")
         try:
-            # Set DUT BOOT0 to 1 to enter USB bootloader mode and power on DUT to apply change
-            self.power_dut_off()
-            BuiltIn().sleep(1)
-            self.set_dut_boot0(1)
-            self.power_dut_on()
-            BuiltIn().sleep(1)
+            # BOOT0=1 + power cycle puts the DUT in the USB bootloader. Retry a few times:
+            # Windows sometimes fails to enumerate right after a power cycle.
+            attempts = 3
+            for attempt in range(1, attempts + 1):
+                logger.info(f"DFU entry attempt {attempt}/{attempts}")
+                self.power_dut_off()
+                BuiltIn().sleep(3)      # let the DUT supply discharge and the USB host see the unplug
+                self.set_dut_boot0(1)
+                BuiltIn().sleep(0.5)
+                self.power_dut_on()     # EXEC_FAIL here is normal: bootloader does not drive the status pin
+                BuiltIn().sleep(2)
 
-            # Check USB device is detected by HIL
-            self._wait_for_dfu_device()
+                if self._wait_for_dfu_device(timeout=20):
+                    break
+            else:
+                raise AssertionError("STM32 DFU device not detected")
+
             logger.info("Waiting DFU stabilization...")
 
             # Flash fimware by using STM32 programmer CLI

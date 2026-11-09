@@ -11,7 +11,7 @@ HIL_ROOT = CI_DIR.parent  # root of the HIL platform repo
 # Persistent data (clones of user repos, last-tested state, results).
 # It MUST live outside the GitHub Actions workspace: actions/checkout runs
 # `git clean -ffdx` and would wipe it on every run.
-DATA_DIR = Path(os.environ.get("HIL_CI_DATA", Path.home() / ".hil_ci"))
+DATA_DIR = Path(os.environ.get("HIL_CI_DATA", r"D:\HCMUT\DA2\hil_ci_data"))
 WORK_DIR = DATA_DIR / "work"
 RESULTS_DIR = DATA_DIR / "results"
 STATE_FILE = DATA_DIR / "last_tested.json"

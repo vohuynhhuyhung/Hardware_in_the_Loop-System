@@ -13,6 +13,18 @@ GitHub Actions (cron 5 phút / chạy tay)
             5. robot/cleanup.robot : tắt nguồn DUT (luôn chạy)
 ```
 
+## Watcher (kích hoạt nhanh, không cần token)
+`HIL_ci/watch_registry.py` chạy nền trên máy bench, mỗi 30 giây hỏi `git ls-remote` cho từng repo trong `registry.json`
+và chạy pipeline ngay khi có commit mới. Không cần GitHub Actions, runner hay secret ở repo user.
+```
+python HIL_ci/watch_registry.py              # chạy mãi
+python HIL_ci/watch_registry.py --once       # một lượt rồi thoát (để thử)
+```
+- Log: `D:\HCMUT\DA2\hil_ci_data\watcher.log`; `watcher.heartbeat` ghi thời điểm lượt kiểm tra gần nhất.
+- `registry.json` được đọc lại mỗi lượt, thêm repo không cần khởi động lại.
+- Dùng chung state và khóa bench với `poll_registry.py` nên chạy song song với cron không bị trùng.
+- Chạy từ bản clone của repo HIL trên máy bench; nhớ `git pull` khi nền tảng có thay đổi.
+
 ## Đăng ký repo user
 Thêm vào `registry.json` (qua PR, bạn duyệt = cổng tin cậy):
 ```json
@@ -29,7 +41,7 @@ Thêm vào `registry.json` (qua PR, bạn duyệt = cổng tin cậy):
 ## Cài runner (một lần)
 1. Cài Python, `arm-none-eabi-gcc`, `make` (hoặc đặt biến `HIL_MAKE` = make.exe của CubeIDE), STM32CubeProgrammer.
 2. Đăng ký GitHub self-hosted runner với label `hil`.
-3. Dữ liệu (clone, kết quả, trạng thái) nằm ở `%USERPROFILE%\.hil_ci` (đổi bằng biến `HIL_CI_DATA`).
+3. Dữ liệu (clone, kết quả, trạng thái) nằm ở `D:\HCMUT\DA2\hil_ci_data` (đổi bằng biến `HIL_CI_DATA`).
 
 ## Chạy tay
 ```
