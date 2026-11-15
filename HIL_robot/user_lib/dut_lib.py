@@ -56,6 +56,11 @@ class DUTLibrary:
 
         return resp
 
+    @keyword("DUT Execute Command")
+    def dut_execute_command(self, command):
+        """Send any CLI command to the DUT and return its response (no check on the content)."""
+        return self._dut_cmd(command, expect_response=False)
+
     # ------------------
     # PWM
     # ------------------
@@ -138,6 +143,83 @@ class DUTLibrary:
             raise AssertionError(
                 f"I2C device {hex_addr} not detected"
             )
+
+    # i2c_tx <len> [start]: DUT sends bytes start, start+1, ... to the fixed test address 0x42
+    @keyword("DUT I2C Transmit Test Bytes")
+    def dut_i2c_transmit_test_bytes(self, length, start=0):
+        length = self._validate_uint("length", length)
+        start = int(str(start), 0)
+        if not 1 <= length <= 64 or not 0 <= start <= 0xFF:
+            raise AssertionError("length must be 1..64 and start 0..0xFF")
+        resp = self._dut_cmd(f"i2c_tx {length} 0x{start:02X}")
+        if "I2C TX OK" not in resp:
+            raise AssertionError(f"DUT I2C transmit failed: {resp}")
+        return resp
+
+    @keyword("DUT I2C Transmit Should Be NACKed")
+    def dut_i2c_transmit_should_be_nacked(self, length=1):
+        length = self._validate_uint("length", length)
+        resp = self._dut_cmd(f"i2c_tx {length}")
+        if "I2C TX FAIL" not in resp:
+            raise AssertionError(f"Expected NACK (no slave at 0x42) but DUT reported: {resp}")
+        return resp
+
+    # Generic register access (DUT commands i2c_wr / i2c_rd), like i2cset / i2cget
+    @keyword("DUT I2C Write Register")
+    def dut_i2c_write_register(self, addr, reg, *values):
+        """DUT writes `values` (1..5 bytes) starting at register `reg` of the device at `addr`."""
+        if not 1 <= len(values) <= 5:
+            raise AssertionError("Give 1..5 values (CLI limit)")
+        args = " ".join(f"0x{int(str(v), 0):02X}" for v in values)
+        resp = self._dut_cmd(f"i2c_wr 0x{int(str(addr), 0):02X} 0x{int(str(reg), 0):02X} {args}")
+        if "I2C WR OK" not in resp:
+            raise AssertionError(f"DUT I2C register write failed: {resp}")
+        return resp
+
+    @keyword("DUT I2C Read Register")
+    def dut_i2c_read_register(self, addr, reg, length=1):
+        """DUT reads `length` bytes from register `reg` of the device at `addr`. Returns a list of ints."""
+        resp = self._dut_cmd(f"i2c_rd 0x{int(str(addr), 0):02X} 0x{int(str(reg), 0):02X} {int(length)}")
+        m = re.search(r"I2C RD addr=0x[0-9A-Fa-f]+ reg=0x[0-9A-Fa-f]+:((?: [0-9A-Fa-f]{2})+)", resp)
+        if not m:
+            raise AssertionError(f"DUT I2C register read failed: {resp}")
+        data = [int(t, 16) for t in m.group(1).split()]
+        if len(data) != int(length):
+            raise AssertionError(f"DUT returned {len(data)} bytes, expected {length}: {resp}")
+        return data
+
+    @keyword("DUT I2C Read Should Fail")
+    def dut_i2c_read_should_fail(self, addr, reg=0):
+        """No device at `addr`: the DUT must report a NACK."""
+        resp = self._dut_cmd(f"i2c_rd 0x{int(str(addr), 0):02X} 0x{int(str(reg), 0):02X} 1")
+        if "I2C RD FAIL" not in resp:
+            raise AssertionError(f"Expected a NACK from address {addr} but DUT reported: {resp}")
+        return resp
+
+    # Generic SPI register access on SPI3 / CS PD0 (DUT commands spi_wr / spi_rd).
+    # Frame: first byte = R/W bit (bit 7, 1 = read) + register address, then data.
+    @keyword("DUT SPI Write Register")
+    def dut_spi_write_register(self, reg, *values):
+        """DUT writes `values` (1..6 bytes) starting at register `reg`."""
+        if not 1 <= len(values) <= 6:
+            raise AssertionError("Give 1..6 values (CLI limit)")
+        args = " ".join(f"0x{int(str(v), 0):02X}" for v in values)
+        resp = self._dut_cmd(f"spi_wr 0x{int(str(reg), 0):02X} {args}")
+        if "SPI WR OK" not in resp:
+            raise AssertionError(f"DUT SPI register write failed: {resp}")
+        return resp
+
+    @keyword("DUT SPI Read Register")
+    def dut_spi_read_register(self, reg, length=1):
+        """DUT reads `length` bytes starting at register `reg`. Returns a list of ints."""
+        resp = self._dut_cmd(f"spi_rd 0x{int(str(reg), 0):02X} {int(length)}")
+        m = re.search(r"SPI RD reg=0x[0-9A-Fa-f]+:((?: [0-9A-Fa-f]{2})+)", resp)
+        if not m:
+            raise AssertionError(f"DUT SPI register read failed: {resp}")
+        data = [int(t, 16) for t in m.group(1).split()]
+        if len(data) != int(length):
+            raise AssertionError(f"DUT returned {len(data)} bytes, expected {length}: {resp}")
+        return data
 
     @keyword("DUT EEPROM Fill")
     def dut_eeprom_fill(self, addr, length):
@@ -655,6 +737,14 @@ class DUTLibrary:
         resp = self._dut_cmd(f"uart_tx {text}")
         if "OK" not in resp:
             raise AssertionError(f"DUT failed to send UART string")
+        return True
+
+    # uart_dump: DUT transmits the 256 bytes 00..FF on USART1
+    @keyword("DUT Send UART 256 Bytes")
+    def dut_send_uart_256_bytes(self):
+        resp = self._dut_cmd("uart_dump")
+        if "DONE" not in resp:
+            raise AssertionError(f"DUT failed to send the UART byte pattern: {resp[-200:]}")
         return True
 
     @keyword("DUT Read UART Data")

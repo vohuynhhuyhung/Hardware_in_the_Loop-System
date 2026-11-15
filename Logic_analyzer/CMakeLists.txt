@@ -30,6 +30,9 @@ pico_sdk_init()
 add_executable(pico_sdk_sigrok
   pico_sdk_sigrok.c
   sr_device.c
+  i2c_slave_emu.c
+  uart_rx_emu.c
+  spi_sniff.c
 )
 
 pico_enable_stdio_usb(pico_sdk_sigrok 1)
@@ -41,6 +44,7 @@ target_link_libraries(
     pico_sdk_sigrok 
     pico_stdlib
     hardware_adc
+    hardware_i2c
     hardware_dma
     hardware_pio
     hardware_sync

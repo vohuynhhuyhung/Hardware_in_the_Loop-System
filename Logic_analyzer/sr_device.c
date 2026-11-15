@@ -1,5 +1,8 @@
 #include "sr_device.h"
 #include "hardware/uart.h"
+#include "i2c_slave_emu.h"
+#include "uart_rx_emu.h"
+#include "spi_sniff.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -246,6 +249,201 @@ int process_char(sr_device_t *d, char charin)
 			} else{
 				ret=0;
 			}
+			break;
+		//I2C register-device emulation. See i2c_slave_emu.h. Uses GP0 (SDA) and GP1 (SCL).
+		//Ie<hh> enable at hex 7-bit address, Ix disable, Ic clear log, Iq dump log, Is status,
+		//Iw<rr><vv> set register, Ig dump registers, Iz reset registers.
+		case 'I':
+#ifdef BASE_MODE
+			switch (d->cmdstr[1]) {
+			case 'e':
+				tmpint = (int)strtol(&(d->cmdstr[2]), NULL, 16);
+				if (i2c_emu_enable((uint8_t)tmpint)) {
+					sprintf(d->rspstr, "I2C ON %02X\n", tmpint);
+				} else {
+					sprintf(d->rspstr, "I2C ERR\n");
+				}
+				ret = 1;
+				break;
+			case 'x':
+				i2c_emu_disable();
+				sprintf(d->rspstr, "I2C OFF\n");
+				ret = 1;
+				break;
+			case 'c':
+				i2c_emu_clear();
+				sprintf(d->rspstr, "I2C CLR\n");
+				ret = 1;
+				break;
+			case 'w': {   //Iw<rr><vv>: set register rr to vv (both 2 hex digits)
+				char rr[3] = { d->cmdstr[2], d->cmdstr[3], 0 };
+				int reg = (int)strtol(rr, NULL, 16);
+				int val = (int)strtol(&(d->cmdstr[4]), NULL, 16);
+				if (d->cmdstr[2] && d->cmdstr[3] && d->cmdstr[4] && val >= 0 && val <= 0xFF
+				    && i2c_emu_set_reg((uint8_t)reg, (uint8_t)val)) {
+					sprintf(d->rspstr, "I2C REG %02X=%02X\n", reg, val);
+				} else {
+					sprintf(d->rspstr, "I2C ERR\n");
+				}
+				ret = 1;
+				break;
+			}
+			case 'g':
+				i2c_emu_dump_regs();   //writes "REGS .." to USB itself
+				ret = 0;
+				break;
+			case 'z':
+				i2c_emu_reset_regs();
+				sprintf(d->rspstr, "I2C REGS 0\n");
+				ret = 1;
+				break;
+			case 't':   //It1 / It0: DS3231 RTC mode on / off
+				i2c_emu_rtc_enable(d->cmdstr[2] == '1');
+				sprintf(d->rspstr, "I2C RTC %d\n", i2c_emu_rtc_is_on() ? 1 : 0);
+				ret = 1;
+				break;
+			case 's':
+				i2c_emu_status(d->rspstr, sizeof(d->rspstr));
+				ret = 1;
+				break;
+			case 'q':
+				i2c_emu_dump();   //writes the text to USB itself
+				ret = 0;
+				break;
+			default:
+				sprintf(d->rspstr, "I2C ERR\n");
+				ret = 1;
+			}
+#else
+			sprintf(d->rspstr, "I2C N/A\n");
+			ret = 1;
+#endif
+			break;
+		//UART receiver (protocol analyzer). See uart_rx_emu.h. Uses GP21 (uart1 RX).
+		//Ue<baud> enable 8N1, Ux disable, Uc clear log, Uq dump log, Us status.
+		case 'U':
+#ifdef BASE_MODE
+			switch (d->cmdstr[1]) {
+			case 'e':
+				tmpint = atol(&(d->cmdstr[2]));
+				if (uart_emu_enable((uint32_t)tmpint)) {
+					sprintf(d->rspstr, "UART ON %d\n", tmpint);
+				} else {
+					sprintf(d->rspstr, "UART ERR\n");
+				}
+				ret = 1;
+				break;
+			case 'x':
+				uart_emu_disable();
+				sprintf(d->rspstr, "UART OFF\n");
+				ret = 1;
+				break;
+			case 'c':
+				uart_emu_clear();
+				sprintf(d->rspstr, "UART CLR\n");
+				ret = 1;
+				break;
+			case 's':
+				uart_emu_status(d->rspstr, sizeof(d->rspstr));
+				ret = 1;
+				break;
+			case 'q':
+				uart_emu_dump();   //writes the text to USB itself
+				ret = 0;
+				break;
+			default:
+				sprintf(d->rspstr, "UART ERR\n");
+				ret = 1;
+			}
+#else
+			sprintf(d->rspstr, "UART N/A\n");
+			ret = 1;
+#endif
+			break;
+		//Passive SPI analyzer. See spi_sniff.h. GP10 SCK, GP11 MOSI, GP12 MISO, GP13 CS.
+		//Se<mode> start (mode 0..3), Sx stop, Sc clear log, Sq dump log, Ss status.
+		case 'S':
+#ifdef BASE_MODE
+			switch (d->cmdstr[1]) {
+			case 'e':
+				tmpint = atoi(&(d->cmdstr[2]));
+				if (spi_sniff_enable(tmpint)) {
+					sprintf(d->rspstr, "SPI ON M%d\n", tmpint);
+				} else {
+					sprintf(d->rspstr, "SPI ERR\n");
+				}
+				ret = 1;
+				break;
+			case 'x':
+				spi_sniff_disable();
+				sprintf(d->rspstr, "SPI OFF\n");
+				ret = 1;
+				break;
+			case 'c':
+				spi_sniff_clear();
+				sprintf(d->rspstr, "SPI CLR\n");
+				ret = 1;
+				break;
+			case 's':
+				spi_sniff_status(d->rspstr, sizeof(d->rspstr));
+				ret = 1;
+				break;
+			case 'q':
+				spi_sniff_dump();   //writes the text to USB itself
+				ret = 0;
+				break;
+			case 'r':   //Sr00 / SrFF: Pico answers on MISO, Srx: passive
+				if (d->cmdstr[2] == 'x') {
+					tmpint = -1;
+				} else {
+					tmpint2 = (int)strtol(&(d->cmdstr[2]), NULL, 16);
+					tmpint = (tmpint2 == 0x00) ? 0 : (tmpint2 == 0xFF) ? 1 : -2;
+				}
+				if (spi_sniff_set_reply(tmpint)) {
+					sprintf(d->rspstr, "SPI RPL %s\n", tmpint < 0 ? "OFF" : (tmpint ? "FF" : "00"));
+				} else {
+					sprintf(d->rspstr, "SPI ERR\n");
+				}
+				ret = 1;
+				break;
+			case 'd':   //Sd1 / Sd0: register device mode on / off
+				if (spi_sniff_set_device(d->cmdstr[2] == '1')) {
+					sprintf(d->rspstr, "SPI DEV %s\n", d->cmdstr[2] == '1' ? "ON" : "OFF");
+				} else {
+					sprintf(d->rspstr, "SPI ERR\n");
+				}
+				ret = 1;
+				break;
+			case 'w': {   //Sw<rr><vv>: set register rr to vv (both 2 hex digits)
+				char rr[3] = { d->cmdstr[2], d->cmdstr[3], 0 };
+				int reg = (int)strtol(rr, NULL, 16);
+				int val = (int)strtol(&(d->cmdstr[4]), NULL, 16);
+				if (d->cmdstr[2] && d->cmdstr[3] && d->cmdstr[4] && val >= 0 && val <= 0xFF
+				    && spi_sniff_set_reg((uint8_t)reg, (uint8_t)val)) {
+					sprintf(d->rspstr, "SPI REG %02X=%02X\n", reg, val);
+				} else {
+					sprintf(d->rspstr, "SPI ERR\n");
+				}
+				ret = 1;
+				break;
+			}
+			case 'g':
+				spi_sniff_dump_regs();   //writes "REGS .." to USB itself
+				ret = 0;
+				break;
+			case 'z':
+				spi_sniff_reset_regs();
+				sprintf(d->rspstr, "SPI REGS 0\n");
+				ret = 1;
+				break;
+			default:
+				sprintf(d->rspstr, "SPI ERR\n");
+				ret = 1;
+			}
+#else
+			sprintf(d->rspstr, "SPI N/A\n");
+			ret = 1;
+#endif
 			break;
 		default:
 			Dprintf("bad command %s\n\r", d->cmdstr);
