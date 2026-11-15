@@ -39,17 +39,38 @@
  *               the read data is queued from an interrupt, so keep SCK at a few MHz at most.
  *     Sw<rr><vv> set register, Sg dump registers ("REGS .."), Sz reset registers to 0x00.
  *     Registers keep their values across Se/Sx, so a test can preload them.
+ *
+ *   EEPROM mode (simplified 25LC020A: 256 bytes, 16-byte pages, SPI mode 1 or 3 here):
+ *     Sd2       EEPROM device on (Sd0 off). Instructions:
+ *                 06 WREN    set the write enable latch (takes effect when CS goes high)
+ *                 04 WRDI    clear it
+ *                 05 RDSR    status: bit 0 WIP (write in progress), bit 1 WEL. Repeated while CS low.
+ *                 03 <a>     READ from address a, auto-increment, wraps 0xFF -> 0x00
+ *                 02 <a> <d..> WRITE: needs WEL, else ignored. The address wraps inside the 16-byte
+ *                            page (0x1F -> 0x10). On CS high: WIP = 1 for 5 ms, WEL cleared.
+ *               While WIP = 1 only RDSR is answered; READ / WRITE / WREN are ignored.
+ *               Not emulated: block protection bits (WRSR), HOLD / WP pins.
+ *     Sm<aa><vv> set EEPROM byte, Sn dump the EEPROM ("MEM .." 256 bytes), Sy erase (all 0xFF).
  */
 #include <stdint.h>
 #include <stdbool.h>
 
 #define SPI_DEV_REG_COUNT 16
+#define SPI_EE_SIZE       256
+
+#define SPI_DEV_REGS   1   // spi_sniff_set_device() kinds (0 = off)
+#define SPI_DEV_EEPROM 2
 
 bool spi_sniff_enable(int mode);
 /* -1 passive, 0 drive MISO low, 1 drive MISO high (only while CS is low). Kept across enable/disable. */
 bool spi_sniff_set_reply(int level);
-/* Register device mode on/off. Kept across enable/disable. False if the current mode has CPHA = 0. */
-bool spi_sniff_set_device(bool on);
+/* Device mode: 0 off, SPI_DEV_REGS, SPI_DEV_EEPROM. Kept across enable/disable.
+ * False if the current SPI mode has CPHA = 0. */
+bool spi_sniff_set_device(int kind);
+int  spi_sniff_get_kind(void);
+bool spi_sniff_ee_set(uint8_t addr, uint8_t value);
+void spi_sniff_ee_erase(void);
+void spi_sniff_ee_dump(void);
 bool spi_sniff_set_reg(uint8_t reg, uint8_t value);
 void spi_sniff_reset_regs(void);
 void spi_sniff_dump_regs(void);

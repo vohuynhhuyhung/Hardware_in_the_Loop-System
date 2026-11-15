@@ -6,6 +6,7 @@
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"
+#include "hardware/structs/timer.h"
 
 // Defined in pico_sdk_sigrok.c: fast write to the USB CDC.
 extern void my_stdio_usb_out_chars(const char *buf, int length);
@@ -48,8 +49,11 @@ static uint reply_offset;
 static uint16_t reply_instr[4];
 static pio_program_t reply_prog = { .instructions = reply_instr, .length = 4, .origin = -1 };
 
-// Device mode: register-based SPI device, first byte = R/W bit (bit 7) + register address.
+// Device mode: the Pico drives MISO through SM_TX. dev_kind selects the emulated device:
+//   SPI_DEV_REGS   register-based device, first byte = R/W bit (bit 7) + register address
+//   SPI_DEV_EEPROM 25LC020A-style EEPROM (256 bytes, 16-byte pages)
 static bool dev_mode;
+static int  dev_kind = SPI_DEV_REGS;
 static bool tx_running;
 static uint tx_offset;
 static uint16_t tx_instr[3];
@@ -58,7 +62,38 @@ static volatile uint8_t regs[SPI_DEV_REG_COUNT];
 static volatile uint32_t byte_idx;    // byte index inside the current CS frame
 static volatile bool     dev_read;    // current frame is a read
 static volatile uint8_t  reg_ptr;     // next register written by the master
-static volatile uint8_t  tx_ptr;      // next register queued for MISO
+static volatile uint8_t  tx_ptr;      // next register / EEPROM address queued for MISO
+
+// EEPROM state (25LC020A subset): WREN 06, WRDI 04, RDSR 05, READ 03 <a>, WRITE 02 <a> <d..>
+#define EE_WREN   0x06
+#define EE_WRDI   0x04
+#define EE_RDSR   0x05
+#define EE_READ   0x03
+#define EE_WRITE  0x02
+#define EE_PAGE   16
+#define EE_TWC_US 5000u   // internal write cycle: status WIP = 1 for 5 ms after a WRITE
+static volatile uint8_t  ee_mem[SPI_EE_SIZE] = { [0 ... SPI_EE_SIZE - 1] = 0xFF };   // erased chip
+static volatile uint8_t  ee_cmd;        // instruction of the current frame
+static volatile bool     ee_wel;        // write enable latch (set by WREN, cleared by WRDI / a write)
+static volatile bool     ee_ok;         // current READ / WRITE frame is accepted (not busy, WEL for WRITE)
+static volatile bool     ee_wrote;      // at least one data byte latched in this frame
+static volatile uint8_t  ee_addr;       // write address
+static volatile bool     ee_cycle;      // write cycle running (until ee_busy_until)
+static volatile uint32_t ee_busy_until; // in timer microseconds (low 32 bits)
+
+static inline bool __not_in_flash_func(ee_busy)(void)
+{
+	// timer_hw->timerawl is read directly: time_us_64() lives in flash, too slow for this IRQ path
+	if (ee_cycle && (int32_t)(ee_busy_until - timer_hw->timerawl) <= 0) {
+		ee_cycle = false;
+	}
+	return ee_cycle;
+}
+
+static inline uint8_t __not_in_flash_func(ee_status)(void)
+{
+	return (uint8_t)((ee_busy() ? 0x01 : 0x00) | (ee_wel ? 0x02 : 0x00));   // bit 0 WIP, bit 1 WEL
+}
 
 static inline void __not_in_flash_func(push)(uint32_t ev)
 {
@@ -80,14 +115,89 @@ static inline uint8_t __not_in_flash_func(reg_value)(uint8_t r)
 static inline void __not_in_flash_func(tx_top_up)(void)
 {
 	while (!pio_sm_is_tx_fifo_full(SNIFF_PIO, SM_TX)) {
-		pio_sm_put(SNIFF_PIO, SM_TX, (uint32_t)reg_value(tx_ptr) << 24);
+		uint8_t v;
+		if (dev_kind == SPI_DEV_EEPROM) {
+			v = (ee_cmd == EE_RDSR) ? ee_status() : ee_mem[tx_ptr];   // READ wraps 0xFF -> 0x00
+		} else {
+			v = reg_value(tx_ptr);
+		}
+		pio_sm_put(SNIFF_PIO, SM_TX, (uint32_t)v << 24);
 		tx_ptr++;
+	}
+}
+
+// EEPROM logic, called for every complete MOSI byte (in IRQ context).
+static void __not_in_flash_func(ee_on_byte)(uint8_t mo)
+{
+	if (byte_idx == 0) {
+		ee_cmd = mo;
+		ee_wrote = false;
+		ee_ok = false;
+		bool busy = ee_busy();
+		if (mo == EE_RDSR) {
+			tx_top_up();                               // status, repeated while CS stays low
+		} else if (mo == EE_READ) {
+			ee_ok = !busy;                             // a busy chip ignores READ
+			if (ee_ok) {
+				pio_sm_put(SNIFF_PIO, SM_TX, 0x00u << 24);   // MISO during the address byte
+			}
+		} else if (mo == EE_WRITE) {
+			ee_ok = ee_wel && !busy;                   // otherwise the data is ignored
+		}
+	} else if (ee_cmd == EE_RDSR) {
+		tx_top_up();
+	} else if (ee_cmd == EE_READ && ee_ok) {
+		if (byte_idx == 1) {
+			tx_ptr = mo;
+		}
+		tx_top_up();
+	} else if (ee_cmd == EE_WRITE && ee_ok) {
+		if (byte_idx == 1) {
+			ee_addr = mo;
+		} else {
+			ee_mem[ee_addr] = mo;
+			// inside a page the address wraps: 0x1F -> 0x10 (like the real chip)
+			ee_addr = (uint8_t)((ee_addr & ~(EE_PAGE - 1)) | ((ee_addr + 1) & (EE_PAGE - 1)));
+			ee_wrote = true;
+		}
+	}
+	byte_idx++;
+}
+
+// EEPROM: CS went high, the instruction takes effect.
+static void __not_in_flash_func(ee_frame_end)(void)
+{
+	if (byte_idx == 0) {
+		return;
+	}
+	if (ee_cmd == EE_WREN && !ee_busy()) {
+		ee_wel = true;
+	} else if (ee_cmd == EE_WRDI && !ee_busy()) {
+		ee_wel = false;
+	} else if (ee_cmd == EE_WRITE && ee_ok && ee_wrote) {
+		ee_busy_until = timer_hw->timerawl + EE_TWC_US;   // write cycle starts
+		ee_cycle = true;
+		ee_wel = false;
+	}
+	ee_cmd = 0;
+	ee_ok = false;
+	byte_idx = 0;
+}
+
+static inline void __not_in_flash_func(dev_frame_end)(void)
+{
+	if (dev_mode && dev_kind == SPI_DEV_EEPROM) {
+		ee_frame_end();
 	}
 }
 
 // Device logic, called for every complete MOSI byte (in IRQ context).
 static void __not_in_flash_func(dev_on_byte)(uint8_t mo)
 {
+	if (dev_kind == SPI_DEV_EEPROM) {
+		ee_on_byte(mo);
+		return;
+	}
 	if (byte_idx == 0) {
 		dev_read = (mo & 0x80) != 0;
 		reg_ptr = mo & 0x7F;
@@ -174,6 +284,7 @@ static void __not_in_flash_func(cs_callback)(uint gpio, uint32_t events)
 		if (!gpio_get(CS_PIN)) {
 			// rise then fall: previous frame ended, the next one has already started.
 			drain();
+			dev_frame_end();
 			push(EV_STOP);
 			tx_restart();     // the device needs a fresh MISO shifter for the new frame
 			frame_start();    // no sniffer restart: the new frame may already be clocking
@@ -181,6 +292,7 @@ static void __not_in_flash_func(cs_callback)(uint gpio, uint32_t events)
 			// fall then rise: a whole (very short) frame happened.
 			frame_start();
 			drain();
+			dev_frame_end();
 			restart_sms();
 			push(EV_STOP);
 		}
@@ -191,6 +303,7 @@ static void __not_in_flash_func(cs_callback)(uint gpio, uint32_t events)
 	}
 	if (rise) {
 		drain();            // all complete bytes of this frame
+		dev_frame_end();    // EEPROM: WREN / WRITE take effect on CS high
 		restart_sms();      // drop a partial byte, if any
 		push(EV_STOP);
 	}
@@ -296,11 +409,20 @@ bool spi_sniff_set_reply(int level)
 	return true;
 }
 
-bool spi_sniff_set_device(bool on)
+bool spi_sniff_set_device(int kind)
 {
+	bool on = (kind != 0);
+	if (kind < 0 || kind > SPI_DEV_EEPROM) {
+		return false;
+	}
 	if (on && enabled && !(spi_mode == 1 || spi_mode == 3)) {
 		return false;   // only CPHA = 1 modes are supported as a device
 	}
+	if (on) {
+		dev_kind = kind;
+	}
+	byte_idx = 0;
+	ee_cmd = 0;
 	dev_mode = on;
 	if (on) {
 		reply_level = -1;
@@ -331,6 +453,43 @@ void spi_sniff_reset_regs(void)
 	for (int i = 0; i < SPI_DEV_REG_COUNT; i++) {
 		regs[i] = 0;
 	}
+}
+
+int spi_sniff_get_kind(void)
+{
+	return dev_mode ? dev_kind : 0;
+}
+
+bool spi_sniff_ee_set(uint8_t addr, uint8_t value)
+{
+	ee_mem[addr] = value;
+	return true;
+}
+
+// Erased chip: all bytes 0xFF, write latch off, not busy.
+void spi_sniff_ee_erase(void)
+{
+	for (int i = 0; i < SPI_EE_SIZE; i++) {
+		ee_mem[i] = 0xFF;
+	}
+	ee_wel = false;
+	ee_cycle = false;
+}
+
+// EEPROM content, one line: "MEM FF FF ..." (SPI_EE_SIZE bytes)
+void spi_sniff_ee_dump(void)
+{
+	char line[8 + 3 * 64];
+	int n = snprintf(line, sizeof(line), "MEM");
+	for (int i = 0; i < SPI_EE_SIZE; i++) {
+		n += snprintf(line + n, sizeof(line) - n, " %02X", ee_mem[i]);
+		if (n > (int)sizeof(line) - 8) {
+			my_stdio_usb_out_chars(line, n);
+			n = 0;
+		}
+	}
+	n += snprintf(line + n, sizeof(line) - n, "\n");
+	my_stdio_usb_out_chars(line, n);
 }
 
 void spi_sniff_dump_regs(void)
@@ -418,8 +577,9 @@ void spi_sniff_clear(void)
 void spi_sniff_status(char *out, int out_len)
 {
 	if (enabled) {
-		// R- passive, R0/RF constant reply, RD register device (keep under 20 chars)
-		char r = dev_mode ? 'D' : (reply_level < 0 ? '-' : (reply_level ? 'F' : '0'));
+		// R- passive, R0/RF constant reply, RD register device, RE EEPROM (keep under 20 chars)
+		char r = dev_mode ? (dev_kind == SPI_DEV_EEPROM ? 'E' : 'D')
+		                  : (reply_level < 0 ? '-' : (reply_level ? 'F' : '0'));
 		snprintf(out, out_len, "SPI M%d R%c E%u D%u\n", spi_mode, r,
 		         (unsigned)(log_head - log_tail), (unsigned)dropped);
 	} else {

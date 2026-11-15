@@ -22,6 +22,13 @@ Register-device session (the Pico is a 16-register SPI sensor, first byte = R/W 
                                         spi_rd 0x02 2       -> 12 34
                                         spi_wr 0x01 0x81
         -> press Enter here: the frames (80 00 / 00 A5 ...) and the register map (register 01 = 81)
+
+EEPROM session (the Pico is a 25LC020A-style EEPROM: 256 bytes, 16-byte pages; erased = all FF):
+    python spi_manual.py --eeprom --reset --mem 40=DE --mem 41=AD
+        -> on the DUT console (COM7):   ee_rd 0x40 2                 -> EE RD addr=0x40: DE AD
+                                        ee_wr 0x0D 1 2 3 4 5 6       -> EE WR OK ... pages=2
+        -> press Enter here: the frames (05 00 | 06 | 05 00 | 02 0D 01 02 03 | 05 00 ...) and the
+           first 32 EEPROM bytes
 """
 import argparse
 import sys
@@ -68,19 +75,30 @@ def main():
     ap.add_argument("--device", action="store_true", help="Pico acts as a 16-register SPI device")
     ap.add_argument("--reg", action="append", default=[], metavar="RR=VV",
                     help="preload a device register, hex, e.g. --reg 00=A5 (repeatable)")
-    ap.add_argument("--reset", action="store_true", help="set all 16 device registers to 00 first")
+    ap.add_argument("--reset", action="store_true", help="set all 16 device registers to 00 first "
+                                                        "(with --eeprom: erase the EEPROM to FF)")
+    ap.add_argument("--eeprom", action="store_true", help="Pico acts as a 256-byte SPI EEPROM")
+    ap.add_argument("--mem", action="append", default=[], metavar="AA=VV",
+                    help="preload an EEPROM byte, hex, e.g. --mem 40=DE (repeatable)")
     a = ap.parse_args()
 
     with serial.Serial(a.port, 921600, timeout=0.2) as ser:
         time.sleep(0.2)
         if a.reset:
-            send(ser, "Sz")
-            print("Sz ->", read_lines_until(ser, "SPI")[-1])
+            send(ser, "Sy" if a.eeprom else "Sz")
+            print("reset ->", read_lines_until(ser, "SPI")[-1])
+        for item in a.mem:
+            aa, vv = item.split("=")
+            send(ser, f"Sm{int(aa, 16):02X}{int(vv, 16):02X}")
+            print("Sm ->", read_lines_until(ser, "SPI")[-1])
         for item in a.reg:
             rr, vv = item.split("=")
             send(ser, f"Sw{int(rr, 16):02X}{int(vv, 16):02X}")
             print("Sw ->", read_lines_until(ser, "SPI")[-1])
-        if a.device:
+        if a.eeprom:
+            send(ser, "Sd2")
+            print("Sd ->", read_lines_until(ser, "SPI")[-1])
+        elif a.device:
             send(ser, "Sd1")
             print("Sd ->", read_lines_until(ser, "SPI")[-1])
         else:
@@ -102,6 +120,10 @@ def main():
         if a.device:
             send(ser, "Sg")
             lines += read_lines_until(ser, "REGS")[-1:]
+        if a.eeprom:
+            send(ser, "Sn")
+            mem = read_lines_until(ser, "MEM")[-1].split()[1:]
+            lines += ["MEM 00..1F " + " ".join(mem[:32])]
         send(ser, "Sx")
         read_lines_until(ser, "SPI")
         send(ser, "Sd0")   # leave the Pico passive

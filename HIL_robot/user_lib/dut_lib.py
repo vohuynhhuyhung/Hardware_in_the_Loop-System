@@ -221,6 +221,30 @@ class DUTLibrary:
             raise AssertionError(f"DUT returned {len(data)} bytes, expected {length}: {resp}")
         return data
 
+    # SPI EEPROM 25LC020A driver of the DUT (SPI3, CS PD0): ee_wr <addr> <b1..b6>, ee_rd <addr> <len>
+    @keyword("DUT SPI EEPROM Write")
+    def dut_spi_eeprom_write(self, addr, *values):
+        """DUT writes `values` (1..6 bytes) at `addr` with its driver (WREN, page split, WIP polling)."""
+        if not 1 <= len(values) <= 6:
+            raise AssertionError("Give 1..6 values (CLI limit)")
+        args = " ".join(f"0x{int(str(v), 0):02X}" for v in values)
+        resp = self._dut_cmd(f"ee_wr 0x{int(str(addr), 0):02X} {args}")
+        if "EE WR OK" not in resp:
+            raise AssertionError(f"DUT SPI EEPROM write failed: {resp}")
+        return resp
+
+    @keyword("DUT SPI EEPROM Read")
+    def dut_spi_eeprom_read(self, addr, length=1):
+        """DUT reads `length` bytes (1..16) from `addr`. Returns a list of ints."""
+        resp = self._dut_cmd(f"ee_rd 0x{int(str(addr), 0):02X} {int(length)}")
+        m = re.search(r"EE RD addr=0x[0-9A-Fa-f]+:((?: [0-9A-Fa-f]{2})+)", resp)
+        if not m:
+            raise AssertionError(f"DUT SPI EEPROM read failed: {resp}")
+        data = [int(t, 16) for t in m.group(1).split()]
+        if len(data) != int(length):
+            raise AssertionError(f"DUT returned {len(data)} bytes, expected {length}: {resp}")
+        return data
+
     @keyword("DUT EEPROM Fill")
     def dut_eeprom_fill(self, addr, length):
 

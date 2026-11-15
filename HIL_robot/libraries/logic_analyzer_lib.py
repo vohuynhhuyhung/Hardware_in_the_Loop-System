@@ -727,6 +727,63 @@ class Logic_Library:
         self._pico_read_until(lambda l: l.startswith("SPI"))
         self.pico_spi_disable()
 
+    # ------------------
+    # SPI EEPROM emulation (simplified 25LC020A: 256 bytes, 16-byte pages), same pins as the SPI device.
+    # Instructions: 06 WREN, 04 WRDI, 05 RDSR (bit 0 WIP, bit 1 WEL), 03 READ <a>, 02 WRITE <a> <d..>.
+    # WRITE needs WEL, wraps inside the page, then WIP = 1 for 5 ms.
+    # Firmware commands: Sd2 EEPROM mode, Sm<aa><vv> set byte, Sn dump ("MEM .."), Sy erase (all FF).
+    # ------------------
+    @keyword("Pico SPI EEPROM Start")
+    def pico_spi_eeprom_start(self, mode=1, erase=True):
+        """Start the emulated SPI EEPROM (SPI mode 1 or 3). `erase=True`: all bytes 0xFF, WEL off."""
+        if str(erase).lower() in ("true", "1", "yes"):
+            self.pico_spi_eeprom_erase()
+        self._pico_send("Sd2")
+        resp = self._pico_read_until(lambda l: l.startswith("SPI"))[-1]
+        if resp != "SPI DEV EE":
+            raise AssertionError(f"Pico has no SPI EEPROM mode (old firmware?): {resp}")
+        self.pico_spi_enable(mode)
+
+    @keyword("Pico SPI EEPROM Erase")
+    def pico_spi_eeprom_erase(self):
+        self._pico_send("Sy")
+        self._pico_read_until(lambda l: l.startswith("SPI"))
+
+    @keyword("Pico SPI EEPROM Set")
+    def pico_spi_eeprom_set(self, addr, *values):
+        """Preload EEPROM bytes from `addr`, e.g. `0x40    0x12    0x34`."""
+        a = int(str(addr), 0)
+        if not values:
+            raise AssertionError("Give at least one value")
+        for i, v in enumerate(values):
+            val = int(str(v), 0)
+            if not 0 <= a + i <= 0xFF or not 0 <= val <= 0xFF:
+                raise AssertionError(f"Address / value out of range: 0x{a + i:X}={v}")
+            self._pico_send(f"Sm{a + i:02X}{val:02X}")
+            resp = self._pico_read_until(lambda l: l.startswith("SPI"))[-1]
+            if not resp.startswith("SPI MEM"):
+                raise AssertionError(f"Pico rejected EEPROM write 0x{a + i:02X}: {resp}")
+
+    @keyword("Pico SPI EEPROM Get")
+    def pico_spi_eeprom_get(self, addr=0, length=256):
+        """Return `length` bytes of the emulated EEPROM from `addr` as a list of ints."""
+        self._pico_send("Sn")
+        line = self._pico_read_until(lambda l: l.startswith("MEM"))[-1]
+        mem = [int(t, 16) for t in line.split()[1:]]
+        if len(mem) != 256:
+            raise AssertionError(f"Bad EEPROM dump ({len(mem)} bytes)")
+        a, n = int(str(addr), 0), int(length)
+        return mem[a:a + n]
+
+    @keyword("Pico SPI EEPROM Should Contain")
+    def pico_spi_eeprom_should_contain(self, addr, *expected):
+        """The emulated EEPROM must hold `expected` from `addr`, e.g. `0x20    0x11    0x22`."""
+        want = [int(str(v), 0) for v in expected]
+        got = self.pico_spi_eeprom_get(addr, len(want))
+        if got != want:
+            raise AssertionError(f"Pico EEPROM 0x{int(str(addr), 0):02X}: expected {self._hex(want)}, "
+                                 f"got {self._hex(got)}")
+
     @keyword("Pico SPI Reset Registers")
     def pico_spi_reset_registers(self):
         self._pico_send("Sz")

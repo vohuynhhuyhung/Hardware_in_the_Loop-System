@@ -406,9 +406,10 @@ int process_char(sr_device_t *d, char charin)
 				}
 				ret = 1;
 				break;
-			case 'd':   //Sd1 / Sd0: register device mode on / off
-				if (spi_sniff_set_device(d->cmdstr[2] == '1')) {
-					sprintf(d->rspstr, "SPI DEV %s\n", d->cmdstr[2] == '1' ? "ON" : "OFF");
+			case 'd':   //Sd1 register device, Sd2 EEPROM, Sd0 off
+				tmpint = d->cmdstr[2] - '0';
+				if (spi_sniff_set_device(tmpint)) {
+					sprintf(d->rspstr, "SPI DEV %s\n", tmpint == 1 ? "ON" : (tmpint == 2 ? "EE" : "OFF"));
 				} else {
 					sprintf(d->rspstr, "SPI ERR\n");
 				}
@@ -434,6 +435,28 @@ int process_char(sr_device_t *d, char charin)
 			case 'z':
 				spi_sniff_reset_regs();
 				sprintf(d->rspstr, "SPI REGS 0\n");
+				ret = 1;
+				break;
+			case 'm': {   //Sm<aa><vv>: set EEPROM byte aa to vv
+				char aa[3] = { d->cmdstr[2], d->cmdstr[3], 0 };
+				int addr = (int)strtol(aa, NULL, 16);
+				int val = (int)strtol(&(d->cmdstr[4]), NULL, 16);
+				if (d->cmdstr[2] && d->cmdstr[3] && d->cmdstr[4] && val >= 0 && val <= 0xFF
+				    && spi_sniff_ee_set((uint8_t)addr, (uint8_t)val)) {
+					sprintf(d->rspstr, "SPI MEM %02X=%02X\n", addr, val);
+				} else {
+					sprintf(d->rspstr, "SPI ERR\n");
+				}
+				ret = 1;
+				break;
+			}
+			case 'n':
+				spi_sniff_ee_dump();   //writes "MEM .." to USB itself
+				ret = 0;
+				break;
+			case 'y':
+				spi_sniff_ee_erase();
+				sprintf(d->rspstr, "SPI MEM FF\n");
 				ret = 1;
 				break;
 			default:
