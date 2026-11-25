@@ -12,6 +12,7 @@ Typical session:
     uart_dump on the DUT sends the 256 bytes 00..FF: use --expect-count 256.
     A wrong --baud shows up as framing errors (FE) and garbage text.
 """
+import os
 import argparse
 import sys
 import time
@@ -43,7 +44,7 @@ def read_lines_until(ser, prefix, timeout=3.0):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--port", default="COM9")
+    ap.add_argument("--port", default=os.environ.get("HIL_LOG_PORT", "COM9"), help="Pico CDC port (default: env HIL_LOG_PORT or COM9)")
     ap.add_argument("--baud", type=int, default=115200)
     ap.add_argument("--expect-text", default=None, help="expected text (whitespace/CRLF trimmed)")
     ap.add_argument("--expect-count", type=int, default=None, help="expected number of bytes")

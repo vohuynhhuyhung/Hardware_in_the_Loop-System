@@ -6,8 +6,22 @@ from robot.api import logger
 from cli_lib import CLI
 import re
 from robot.libraries.BuiltIn import BuiltIn
+import shutil
 import subprocess
+import sys
 import time
+
+
+def _programmer_cli():
+    """STM32_Programmer_CLI: env HIL_STM32_PROGRAMMER, else the PATH, else the default install dir."""
+    path = os.environ.get("HIL_STM32_PROGRAMMER") or shutil.which("STM32_Programmer_CLI")
+    if not path:
+        path = (r"D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe" if sys.platform == "win32"
+                else str(Path.home() / "STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI"))
+    if not os.path.isfile(path):
+        raise AssertionError(f"STM32_Programmer_CLI not found at {path} (set HIL_STM32_PROGRAMMER)")
+    return path
+
 
 @library(scope="GLOBAL")
 class HILLibrary:
@@ -126,7 +140,26 @@ class HILLibrary:
         self._hil_cmd(f"dut_boot0_set {value}")
 
     def _pnp_snapshot(self):
-        """Return 'FriendlyName | InstanceId | Status' lines for all present PnP devices."""
+        """Return one line per present USB/PnP device (used to spot the STM32 DFU bootloader).
+
+        Windows: 'FriendlyName | InstanceId | Status' from PowerShell (wmic is gone in Windows 11).
+        Linux:   'product | VID_xxxx&PID_xxxx | OK' read from /sys/bus/usb/devices, written in
+                 the same VID_/PID_ form so the checks below work on both systems.
+        """
+        if sys.platform != "win32":
+            lines = []
+            for dev in Path("/sys/bus/usb/devices").glob("*"):
+                try:
+                    vid = (dev / "idVendor").read_text().strip()
+                    pid = (dev / "idProduct").read_text().strip()
+                except OSError:
+                    continue   # interfaces and hubs without these files
+                try:
+                    product = (dev / "product").read_text().strip()
+                except OSError:
+                    product = ""
+                lines.append(f"{product} | USB\\VID_{vid.upper()}&PID_{pid.upper()} | OK")
+            return "\n".join(lines)
         result = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command",
              "Get-PnpDevice -PresentOnly | ForEach-Object { $_.FriendlyName + ' | ' + $_.InstanceId + ' | ' + $_.Status }"],
@@ -165,7 +198,7 @@ class HILLibrary:
 
     def _flash_via_stm32_cli(self, fw_path):
 
-        cli_path = r"D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
+        cli_path = _programmer_cli()
 
         cmd = [
             cli_path,

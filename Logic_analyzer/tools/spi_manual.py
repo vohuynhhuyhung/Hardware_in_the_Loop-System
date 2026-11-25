@@ -29,7 +29,10 @@ EEPROM session (the Pico is a 25LC020A-style EEPROM: 256 bytes, 16-byte pages; e
                                         ee_wr 0x0D 1 2 3 4 5 6       -> EE WR OK ... pages=2
         -> press Enter here: the frames (05 00 | 06 | 05 00 | 02 0D 01 02 03 | 05 00 ...) and the
            first 32 EEPROM bytes
+    python spi_manual.py --eeprom --reset --keep     EEPROM stays on after the script exits
+    python spi_manual.py --off                       Pico passive again (MISO released)
 """
+import os
 import argparse
 import sys
 import time
@@ -66,7 +69,7 @@ def match(pattern, data):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--port", default="COM9")
+    ap.add_argument("--port", default=os.environ.get("HIL_LOG_PORT", "COM9"), help="Pico CDC port (default: env HIL_LOG_PORT or COM9)")
     ap.add_argument("--mode", type=int, default=1, help="SPI mode 0..3 of the DUT (default 1)")
     ap.add_argument("--expect-mosi", default=None, help='MOSI bytes of one frame, e.g. "9F 00 00 00"')
     ap.add_argument("--expect-miso", default=None, help='MISO bytes of that frame, "??" = any byte')
@@ -78,12 +81,21 @@ def main():
     ap.add_argument("--reset", action="store_true", help="set all 16 device registers to 00 first "
                                                         "(with --eeprom: erase the EEPROM to FF)")
     ap.add_argument("--eeprom", action="store_true", help="Pico acts as a 256-byte SPI EEPROM")
+    ap.add_argument("--keep", action="store_true",
+                    help="set the Pico up, then exit and LEAVE it running (device / EEPROM stays on, "
+                         "MISO driven). Turn it off later with --off")
+    ap.add_argument("--off", action="store_true", help="turn the SPI emulation off (Pico passive again)")
     ap.add_argument("--mem", action="append", default=[], metavar="AA=VV",
                     help="preload an EEPROM byte, hex, e.g. --mem 40=DE (repeatable)")
     a = ap.parse_args()
 
     with serial.Serial(a.port, 921600, timeout=0.2) as ser:
         time.sleep(0.2)
+        if a.off:
+            for c in ("Sx", "Sd0", "Srx"):
+                send(ser, c)
+                print(c, "->", read_lines_until(ser, "SPI")[-1])
+            return 0
         if a.reset:
             send(ser, "Sy" if a.eeprom else "Sz")
             print("reset ->", read_lines_until(ser, "SPI")[-1])
@@ -112,6 +124,10 @@ def main():
         if not resp.startswith("SPI ON"):
             print("Pico did not start the SPI analyzer (wrong firmware?)")
             return 2
+
+        if a.keep:
+            print("Pico left running. Use the DUT commands now; turn it off with:  python spi_manual.py --off")
+            return 0
 
         input(f"Sniffing SPI mode {a.mode}. Run the command on the DUT, then press Enter... ")
 

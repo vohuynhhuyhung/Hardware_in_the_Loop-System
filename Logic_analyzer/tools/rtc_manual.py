@@ -17,6 +17,7 @@ Typical session:
     python rtc_manual.py --stop     turn the RTC off (the Pico stops answering at 0x68)
 The script leaves the RTC running when it exits, so the DUT can keep talking to it.
 """
+import os
 import argparse
 import sys
 import time
@@ -68,7 +69,7 @@ def get_time(ser):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--port", default="COM9")
+    ap.add_argument("--port", default=os.environ.get("HIL_LOG_PORT", "COM9"), help="Pico CDC port (default: env HIL_LOG_PORT or COM9)")
     ap.add_argument("--set", default=None, metavar='"YYYY-MM-DD HH:MM:SS"', help="set the RTC time")
     ap.add_argument("--dow", type=int, default=1, help="day of week 1..7 used with --set (default 1)")
     ap.add_argument("--reset", action="store_true", help="power-on state 2000-01-01 00:00:00")

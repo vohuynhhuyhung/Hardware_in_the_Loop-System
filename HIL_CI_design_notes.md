@@ -55,7 +55,7 @@ Quyết định chính:
 
 `hil.json` (tùy chọn, ở gốc repo user):
 ```json
-{ "tests_dir": "hil_tests", "hex": "path/fw.hex", "build_dir": "Debug" }
+{ "tests_dir": "hil_tests", "hex": "path/fw.hex", "project": "STM32F4_DUT", "config": "Debug" }
 ```
 
 ## 5. Các file đã tạo
@@ -81,7 +81,7 @@ python HIL_ci/poll_registry.py --only nhom1 --ref <branch-hoac-sha>
 
 ## 7. Việc còn lại / lưu ý
 
-1. Máy hiện tại **chưa có `make`** (chỉ có `arm-none-eabi-gcc`). Cài `make` hoặc đặt `HIL_MAKE` = `make.exe` của CubeIDE.
+1. Không có `"hex"` thì CI build bằng STM32CubeIDE headless (`stm32cubeidec.exe`, biến `HIL_CUBEIDE`): makefile sinh từ `.cproject`, user không phải commit file build.
 2. `.gitignore` đang chặn `*.hex`; user dùng hex dựng sẵn phải `git add -f`.
 3. Hai `cli_lib.py` trùng tên nhưng khác nội dung (`libraries/` và `user_lib/`); runner ép bản của nền tảng (tập cha) đứng trước bằng `--pythonpath`. Về lâu dài nên đổi tên bản của user.
 4. Test và `make` của user là code tùy ý chạy trên máy bạn → chỉ đăng ký repo tin cậy; luôn có timeout và bước tắt nguồn DUT.
@@ -96,4 +96,4 @@ python HIL_ci/poll_registry.py --only nhom1 --ref <branch-hoac-sha>
 - `HIL_robot/user_resources/DUT_keywords.robot`: `COM7`
 - `HIL_robot/libraries/hil_lib.py`: đường dẫn `STM32_Programmer_CLI.exe`, lệnh `wmic`
 - `HIL_robot/tests/03__flash_fw_test.robot`: `FIRMWARE_PATH` (`D:/STUDY/...`)
-- `HIL_ci/hil_ci_common.py`: `MAKE_CMD`, các timeout
+- `HIL_ci/hil_ci_common.py`: `CUBEIDE_CMD`, các timeout

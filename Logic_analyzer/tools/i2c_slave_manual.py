@@ -19,6 +19,7 @@ Raw-transfer session (default address 0x42 = I2C_TEST_ADDR of the DUT firmware):
 i2c_tx <len> [start] sends bytes start, start+1, ... (len 1..64) to 0x42.
 Address-only transactions ("S P") and stray STOPs are ignored by --expect.
 """
+import os
 import argparse
 import sys
 import time
@@ -61,7 +62,7 @@ def dump(ser, timeout=5.0):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--port", default="COM9", help="Pico CDC port (default COM9)")
+    ap.add_argument("--port", default=os.environ.get("HIL_LOG_PORT", "COM9"), help="Pico CDC port (default: env HIL_LOG_PORT or COM9)")
     ap.add_argument("--addr", default="42", help="7-bit slave address in hex (default 42)")
     ap.add_argument("--reg", action="append", default=[], metavar="RR=VV",
                     help="preload a register before starting, hex, e.g. --reg 00=5A (repeatable)")

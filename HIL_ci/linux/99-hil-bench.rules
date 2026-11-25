@@ -1,0 +1,11 @@
+# udev rules for the HIL bench (installed by setup_linux.sh into /etc/udev/rules.d/).
+
+# STM32 ROM bootloader in USB DFU mode (BOOT0 = 1): STM32_Programmer_CLI flashes the DUT
+# through it, so the bench user must be able to open it without root.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="df11", MODE="0666", TAG+="uaccess"
+
+# ModemManager probes every new /dev/ttyACM* with AT commands. On the HIL board, the DUT
+# (STMicroelectronics, 0483) and the Pico 2 (Raspberry Pi, 2e8a) those bytes land in the CLI
+# and can break the first command of a test. Tell it to leave them alone.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ENV{ID_MM_DEVICE_IGNORE}="1"

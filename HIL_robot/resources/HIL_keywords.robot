@@ -4,8 +4,8 @@ Library    ../libraries/logic_analyzer_lib.py
 Library    BuiltIn
 
 *** Variables ***
-${HIL_PORT}          COM6
-${LOG_PORT}          COM9
+${HIL_PORT}          %{HIL_PORT=COM6}
+${LOG_PORT}          %{HIL_LOG_PORT=COM9}
 ${HIL_BAUDRATE}      921600
 
 *** Keywords ***

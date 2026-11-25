@@ -1,4 +1,4 @@
 {
   "tests_dir": "hil_tests",
-  "build_dir": "Debug"
+  "config": "Debug"
 }

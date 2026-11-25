@@ -1,0 +1,4 @@
+# Shell scripts and Linux config files must keep LF line endings even when committed from Windows
+*.sh      text eol=lf
+*.rules   text eol=lf
+*.env.example text eol=lf

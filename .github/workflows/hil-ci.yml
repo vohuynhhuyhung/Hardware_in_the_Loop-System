@@ -21,15 +21,18 @@ concurrency:
 
 jobs:
   hil:
-    runs-on: [self-hosted, windows, hil]
+    # The bench PC (Linux or Windows) registers its runner with the label "hil".
+    runs-on: [self-hosted, hil]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Python deps
+      - name: Install Python deps (Windows)
+        if: runner.os == 'Windows'
         run: python -m pip install -r HIL_ci/requirements.txt
 
-      - name: Poll registry and run HIL tests
+      - name: Poll registry and run HIL tests (Windows)
+        if: runner.os == 'Windows'
         env:
           ONLY: ${{ github.event.inputs.only }}
           REF: ${{ github.event.inputs.ref }}
@@ -39,6 +42,22 @@ jobs:
           if ($env:ONLY) { $a += @("--only", $env:ONLY) }
           if ($env:REF)  { $a += @("--ref", $env:REF) }
           python HIL_ci/poll_registry.py @a
+
+      # Linux: the bench settings (serial ports, tool paths, data dir) come from the same
+      # env file as the watcher service, and Python from the venv made by setup_linux.sh.
+      - name: Poll registry and run HIL tests (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ONLY: ${{ github.event.inputs.only }}
+          REF: ${{ github.event.inputs.ref }}
+        shell: bash
+        run: |
+          set -a; . "$HOME/.config/hil-ci/hil-ci.env"; set +a
+          args=()
+          [ -n "$ONLY" ] && args+=(--only "$ONLY")
+          [ -n "$REF" ]  && args+=(--ref "$REF")
+          "$HIL_VENV/bin/python" -m pip install -q -r HIL_ci/requirements.txt
+          "$HIL_VENV/bin/python" HIL_ci/poll_registry.py "${args[@]}"
 
       - name: Upload results
         if: always()

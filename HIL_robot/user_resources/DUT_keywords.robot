@@ -3,7 +3,7 @@ Library    ../user_lib/dut_lib.py
 Library    BuiltIn
 
 *** Variables ***
-${DUT_PORT}        COM7
+${DUT_PORT}        %{HIL_DUT_PORT=COM7}
 ${DUT_BAUDRATE}    921600
 
 *** Keywords ***

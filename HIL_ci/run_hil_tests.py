@@ -8,9 +8,12 @@ directly takes the lock itself.
 Optional manifest `hil.json` in the user repo root:
     {
       "tests_dir": "hil_tests",     # default "hil_tests"
-      "hex": "build/fw.hex",        # prebuilt hex: used as-is, no build
-      "build_dir": "Debug"          # dir with the CubeIDE makefile (default: Debug/)
+      "hex": "build/fw.hex",        # prebuilt hex: used as-is, no build (wins over the keys below)
+      "project": "STM32F4_DUT",     # dir with the CubeIDE .project/.cproject (default: the only one in the repo)
+      "config": "Debug"             # CubeIDE build configuration (default "Debug")
     }
+Without "hex", the firmware is built from source with STM32CubeIDE in headless mode
+(the makefiles are generated from .cproject, nothing built has to be committed).
 """
 import argparse
 import json
@@ -21,7 +24,7 @@ import sys
 import time
 from pathlib import Path
 
-from hil_ci_common import (BUILD_TIMEOUT_S, CI_DIR, HIL_ROOT, MAKE_CMD,
+from hil_ci_common import (BUILD_TIMEOUT_S, CI_DIR, CUBEIDE_CMD, DATA_DIR, HIL_ROOT,
                            PREPARE_TIMEOUT_S, RESULTS_DIR, USER_TEST_TIMEOUT_S,
                            WORK_DIR, hil_lock, log)
 
@@ -64,41 +67,71 @@ def _inside(work, rel):
     return p
 
 
-def get_hex(work, manifest):
-    """Prebuilt hex from the manifest if declared, otherwise build it."""
+def get_hex(work, manifest, results_dir):
+    """Prebuilt hex from the manifest if declared, otherwise build it from source."""
     if manifest.get("hex"):
         hex_path = _inside(work, manifest["hex"])
         if not hex_path.is_file():
             raise PipelineError("build", f"hil.json declares hex '{manifest['hex']}' but it is not in the repo")
         log(f"Using prebuilt hex: {hex_path}")
         return hex_path
+    return build_cubeide(work, manifest, results_dir)
 
-    if manifest.get("build_dir"):
-        build_dir = _inside(work, manifest["build_dir"])
-    elif (work / "Debug" / "makefile").exists():
-        build_dir = work / "Debug"
+
+def _find_project(work, manifest):
+    """Dir holding the CubeIDE .project + .cproject."""
+    if manifest.get("project"):
+        proj = _inside(work, manifest["project"])
     else:
-        found = sorted(work.glob("**/Debug/makefile"))
+        found = [p.parent for p in sorted(work.glob("**/.cproject")) if ".git" not in p.parts]
         if not found:
-            raise PipelineError("build", "No hex declared and no Debug/makefile found to build from")
-        build_dir = found[0].parent
-    if not (build_dir / "makefile").exists():
-        raise PipelineError("build", f"No makefile in {build_dir}")
-    if shutil.which(MAKE_CMD) is None:
-        raise PipelineError("build", f"'{MAKE_CMD}' not found on the runner (set HIL_MAKE, e.g. CubeIDE's make.exe)")
+            raise PipelineError("build", "No hex declared in hil.json and no STM32CubeIDE project (.cproject) in the repo")
+        if len(found) > 1:
+            rels = ", ".join(str(p.relative_to(work)) for p in found)
+            raise PipelineError("build", f"Several CubeIDE projects found ({rels}): set \"project\" in hil.json")
+        proj = found[0]
+    if not (proj / ".project").is_file() or not (proj / ".cproject").is_file():
+        raise PipelineError("build", f"{proj.name}/ has no .project/.cproject (commit them, they define the build)")
+    return proj
 
-    log(f"Building in {build_dir}")
+
+def build_cubeide(work, manifest, results_dir):
+    """Clean build with STM32CubeIDE in headless mode: it regenerates the makefiles from
+    .cproject, builds with the IDE's own toolchain and exits non-zero on a compile error."""
+    proj = _find_project(work, manifest)
+    config = manifest.get("config", "Debug")
+    m = re.search(r"<name>([^<]+)</name>", (proj / ".project").read_text("utf-8", errors="replace"))
+    if not m:
+        raise PipelineError("build", f"Cannot read the project name from {proj.name}/.project")
+    name = m.group(1).strip()
+    if not Path(CUBEIDE_CMD).is_file():
+        raise PipelineError("build", f"STM32CubeIDE not found at '{CUBEIDE_CMD}' "
+                                     "(set HIL_CUBEIDE: stm32cubeidec.exe on Windows, stm32cubeide on Linux)")
+
+    # Fresh Eclipse workspace each time: a project left over from an earlier run blocks the import.
+    ws = DATA_DIR / "cubeide_ws"
+    shutil.rmtree(ws, ignore_errors=True)
+    # Eclipse wants native paths (C:\...): "C:/..." is read as a URI with scheme "C".
+    cmd = [CUBEIDE_CMD, "--launcher.suppressErrors", "-nosplash",
+           "-application", "org.eclipse.cdt.managedbuilder.core.headlessbuild",
+           "-data", str(ws), "-import", str(proj), "-cleanBuild", f"{name}/{config}"]
+    log(f"Building {name}/{config} with STM32CubeIDE (headless)")
+    started = time.time()
     try:
-        r = subprocess.run([MAKE_CMD, "-C", str(build_dir), "all", "-j4"],
-                           capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
+        r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=BUILD_TIMEOUT_S)
     except subprocess.TimeoutExpired:
         raise PipelineError("build", f"Build timed out after {BUILD_TIMEOUT_S}s")
+    out = r.stdout + r.stderr
+    (results_dir / "build.log").write_text(out, "utf-8")
     if r.returncode != 0:
-        raise PipelineError("build", "Build failed:\n" + (r.stdout + r.stderr)[-3000:])
-    hexes = sorted(build_dir.glob("*.hex"), key=lambda p: p.stat().st_mtime)
+        errors = [ln for ln in out.splitlines() if "error" in ln.lower() and " 0 errors" not in ln]
+        raise PipelineError("build", "Build failed (full log: build.log):\n" + "\n".join(errors[-30:])[-3000:])
+    # -cleanBuild deletes the old outputs, but a hex committed by mistake must never be flashed
+    hexes = [p for p in (proj / config).glob("*.hex") if p.stat().st_mtime >= started - 2]
     if not hexes:
-        raise PipelineError("build", "Build succeeded but produced no .hex")
-    return hexes[-1]
+        raise PipelineError("build", f"Build succeeded but produced no .hex in {proj.name}/{config}/ "
+                                     "(enable Convert to Intel Hex file in the project settings)")
+    return max(hexes, key=lambda p: p.stat().st_mtime)
 
 
 def check_hex(hex_path):
@@ -147,7 +180,7 @@ def run(name, repo, ref):
         manifest_file = work / "hil.json"
         manifest = json.loads(manifest_file.read_text("utf-8")) if manifest_file.exists() else {}
 
-        hex_path = get_hex(work, manifest)
+        hex_path = get_hex(work, manifest, results_dir)
         check_hex(hex_path)
         summary["stages"]["build"] = "PASS"
 

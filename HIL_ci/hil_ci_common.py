@@ -7,23 +7,29 @@ from pathlib import Path
 
 CI_DIR = Path(__file__).resolve().parent
 HIL_ROOT = CI_DIR.parent  # root of the HIL platform repo
+IS_WINDOWS = sys.platform == "win32"
 
+# ---------------------------------------------------------------------------
+# Bench settings. Every one can be overridden with an environment variable
+# (on Linux they live in the env file read by the watcher service, see HIL_ci/linux/).
+# The other bench settings (serial ports, STM32_Programmer_CLI) are read from the
+# same variables by HIL_robot/resources/*.robot and HIL_robot/libraries/hil_lib.py.
+# ---------------------------------------------------------------------------
 # Persistent data (clones of user repos, last-tested state, results).
 # It MUST live outside the GitHub Actions workspace: actions/checkout runs
 # `git clean -ffdx` and would wipe it on every run.
-DATA_DIR = Path(os.environ.get("HIL_CI_DATA", r"D:\HCMUT\DA2\hil_ci_data"))
+DATA_DIR = Path(os.environ.get("HIL_CI_DATA") or
+                (r"D:\HCMUT\DA2\hil_ci_data" if IS_WINDOWS else str(Path.home() / "hil_ci_data")))
 WORK_DIR = DATA_DIR / "work"
 RESULTS_DIR = DATA_DIR / "results"
 STATE_FILE = DATA_DIR / "last_tested.json"
 LOCK_FILE = DATA_DIR / "hil.lock"
 
-# ---------------------------------------------------------------------------
-# HARDCODED SETTINGS - revisit these when moving to another machine
-# (COM ports and the STM32_Programmer_CLI path are hardcoded elsewhere:
-#  HIL_robot/resources/HIL_keywords.robot, HIL_robot/libraries/hil_lib.py,
-#  HIL_robot/user_resources/DUT_keywords.robot)
-# ---------------------------------------------------------------------------
-MAKE_CMD = os.environ.get("HIL_MAKE", "make")  # CubeIDE ships its own make.exe
+# STM32CubeIDE launcher used for the headless build of user repos that do not commit a hex
+# (Windows: the console build stm32cubeidec.exe; Linux: the default install dir of the ST installer).
+CUBEIDE_CMD = os.environ.get("HIL_CUBEIDE") or (
+    r"D:\STM32CubeIDE_1.19.0\STM32CubeIDE\stm32cubeidec.exe" if IS_WINDOWS
+    else "/opt/st/stm32cubeide_1.19.0/stm32cubeide")
 BUILD_TIMEOUT_S = 600
 PREPARE_TIMEOUT_S = 300   # smoke + flash
 USER_TEST_TIMEOUT_S = 1800

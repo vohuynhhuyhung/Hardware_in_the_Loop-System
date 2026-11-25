@@ -1,13 +1,13 @@
 # HIL CI
 
-Pipeline chạy trên PC nối với bench HIL (self-hosted runner, Windows).
+Pipeline chạy trên PC nối với bench HIL (Windows hoặc Linux).
 
 ```
 GitHub Actions (cron 5 phút / chạy tay)
   └─ poll_registry.py      đọc registry.json, so SHA mới nhất với last_tested.json
        └─ run_hil_tests.py  (mỗi commit mới, giữ khóa bench)
             1. git fetch + checkout commit của user
-            2. hex: dùng "hex" trong hil.json nếu có, không thì make -C Debug
+            2. hex: dùng "hex" trong hil.json nếu có, không thì build bằng STM32CubeIDE headless
             3. robot/prepare.robot : smoke HIL + flash        (của nền tảng)
             4. robot <hil_tests/>  : test của user
             5. robot/cleanup.robot : tắt nguồn DUT (luôn chạy)
@@ -32,14 +32,14 @@ Thêm vào `registry.json` (qua PR, bạn duyệt = cổng tin cậy):
 ```
 
 ## Repo của user
-- Firmware CubeIDE (có `Debug/makefile`) hoặc hex dựng sẵn.
+- Project STM32CubeIDE (commit `.project`, `.cproject`, mã nguồn; CI tự build headless) hoặc hex dựng sẵn.
 - `hil_tests/*.robot` (xem `user_template/`), import keyword HIL bằng
   `Resource ${HIL_ROOT}/HIL_robot/resources/HIL_keywords.robot`.
-- `hil.json` (tùy chọn): `tests_dir`, `hex`, `build_dir`.
+- `hil.json` (tùy chọn): `tests_dir`, `hex`, `project`, `config` (xem docstring `run_hil_tests.py`).
 - `.gitignore` của repo này đang chặn `*.hex`; user muốn dùng hex dựng sẵn phải `git add -f`.
 
 ## Cài runner (một lần)
-1. Cài Python, `arm-none-eabi-gcc`, `make` (hoặc đặt biến `HIL_MAKE` = make.exe của CubeIDE), STM32CubeProgrammer.
+1. Cài Python, STM32CubeIDE (build headless bằng `stm32cubeidec.exe`, đổi đường dẫn bằng biến `HIL_CUBEIDE`), STM32CubeProgrammer.
 2. Đăng ký GitHub self-hosted runner với label `hil`.
 3. Dữ liệu (clone, kết quả, trạng thái) nằm ở `D:\HCMUT\DA2\hil_ci_data` (đổi bằng biến `HIL_CI_DATA`).
 
@@ -49,8 +49,22 @@ python HIL_ci/run_hil_tests.py --name nhom1 --repo <git-url> --ref main
 python HIL_ci/poll_registry.py --only nhom1 --ref <branch-hoac-sha>
 ```
 
-## Hardcode cần sửa khi đổi máy
-- `HIL_robot/resources/HIL_keywords.robot`: `COM6`, `COM9`
-- `HIL_robot/user_resources/DUT_keywords.robot`: `COM7`
-- `HIL_robot/libraries/hil_lib.py`: đường dẫn `STM32_Programmer_CLI.exe`, lệnh `wmic`
-- `HIL_ci/hil_ci_common.py`: `MAKE_CMD`, các timeout
+## Thiết lập riêng của máy bench
+Đọc từ biến môi trường; không đặt thì dùng giá trị mặc định của bench Windows.
+
+| Biến | Mặc định (Windows) | Dùng ở |
+|---|---|---|
+| `HIL_PORT` | `COM6` | `HIL_robot/resources/HIL_keywords.robot`, `hil_power.py` |
+| `HIL_LOG_PORT` | `COM9` | `HIL_robot/resources/HIL_keywords.robot`, `Logic_analyzer/tools/*.py` |
+| `HIL_DUT_PORT` | `COM7` | `HIL_robot/user_resources/DUT_keywords.robot` |
+| `HIL_STM32_PROGRAMMER` | PATH, rồi `D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe` | `HIL_robot/libraries/hil_lib.py` |
+| `HIL_CUBEIDE` | `D:\STM32CubeIDE_1.19.0\STM32CubeIDE\stm32cubeidec.exe` | `HIL_ci/hil_ci_common.py` |
+| `HIL_CI_DATA` | `D:\HCMUT\DA2\hil_ci_data` (Linux: `~/hil_ci_data`) | `HIL_ci/hil_ci_common.py` |
+
+Timeout nằm trong `HIL_ci/hil_ci_common.py`.
+
+## Bench Linux
+Xem [linux/README.md](linux/README.md): script `linux/setup_linux.sh` cài gói, venv, quyền USB/serial (udev),
+file thiết lập `~/.config/hil-ci/hil-ci.env` và service systemd `hil-watcher`.
+
+Bật/tắt nguồn DUT bằng tay (mọi hệ điều hành): `python HIL_ci/hil_power.py on|off|status`.
